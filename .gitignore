@@ -1,0 +1,30 @@
+# WordPress
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+debug.log
+
+# Temporary files
+*.tmp
+*.bak
+*.cache
+
+# Node modules (if any)
+node_modules/
+
+# Composer vendor (if any)
+vendor/
+
+# OS files
+.DS_Store
+.AppleDouble
+.LSOverride
