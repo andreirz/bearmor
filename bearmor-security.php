@@ -3,7 +3,7 @@
  * Plugin Name: Bearmor Security
  * Plugin URI: https://bearmor.com
  * Description: Lightweight, robust WordPress security plugin for SMBs.
- * Version: 0.1
+ * Version: 0.1.4
  * Author: Bearmor Security Team
  * Author URI: https://bearmor.com
  * License: GPL v2 or later
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'BEARMOR_VERSION', '0.1.0' );
+define( 'BEARMOR_VERSION', '0.1.4' );
 define( 'BEARMOR_PLUGIN_FILE', __FILE__ );
 define( 'BEARMOR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BEARMOR_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -95,6 +95,35 @@ function bearmor_activate() {
 	) $charset_collate;";
 	dbDelta( $sql );
 
+	// Malware detections table
+	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_malware_detections (
+		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+		file_path VARCHAR(500) NOT NULL,
+		pattern_id VARCHAR(100) NOT NULL,
+		pattern_name VARCHAR(255) NOT NULL,
+		severity ENUM('critical', 'high', 'medium', 'low') NOT NULL,
+		category VARCHAR(100) NOT NULL,
+		description TEXT,
+		line_number INT UNSIGNED NOT NULL,
+		code_snippet TEXT,
+		matched_text TEXT,
+		detected_at DATETIME NOT NULL,
+		status ENUM('pending', 'whitelisted', 'quarantined', 'false_positive') DEFAULT 'pending',
+		action_by BIGINT UNSIGNED,
+		KEY file_path (file_path),
+		KEY severity (severity),
+		KEY status (status),
+		KEY detected_at (detected_at)
+	) $charset_collate;";
+	dbDelta( $sql );
+	
+	// Add description column if it doesn't exist (for existing installations)
+	$table_name = $wpdb->prefix . 'bearmor_malware_detections';
+	$column_exists = $wpdb->get_results( "SHOW COLUMNS FROM {$table_name} LIKE 'description'" );
+	if ( empty( $column_exists ) ) {
+		$wpdb->query( "ALTER TABLE {$table_name} ADD COLUMN description TEXT AFTER category" );
+	}
+
 	// Create quarantine directory
 	$quarantine_dir = WP_CONTENT_DIR . '/bearmor-quarantine';
 	if ( ! file_exists( $quarantine_dir ) ) {
@@ -121,19 +150,20 @@ register_activation_hook( __FILE__, 'bearmor_activate' );
 function bearmor_deactivate() {
 	// Cleanup if needed
 }
-register_deactivation_hook( __FILE__, 'bearmor_deactivate' );
-
 /**
  * Load required classes
  */
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-helpers.php';
-require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-wporg-api.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-settings.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-checksum.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-file-scanner.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-file-actions.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-wporg-api.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-malware-patterns.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-malware-scanner.php';
 
 /**
- * Load required classes for admin
+ * Show notice to run baseline scan
  */
 function bearmor_baseline_scan_notice() {
 	if ( get_option( 'bearmor_show_baseline_notice' ) && current_user_can( 'manage_options' ) ) {
@@ -292,6 +322,76 @@ add_action( 'wp_ajax_bearmor_preview_file', function() {
 } );
 
 /**
+ * AJAX handler for malware file preview with line highlighting
+ */
+add_action( 'wp_ajax_bearmor_preview_malware_file', function() {
+	// Verify nonce
+	if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( $_POST['nonce'], 'bearmor_preview' ) ) {
+		wp_send_json_error( array( 'message' => 'Invalid nonce' ) );
+	}
+
+	// Check permissions
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => 'Insufficient permissions' ) );
+	}
+
+	$file_path = isset( $_POST['file_path'] ) ? sanitize_text_field( $_POST['file_path'] ) : '';
+	$line_number = isset( $_POST['line_number'] ) ? intval( $_POST['line_number'] ) : 0;
+	
+	if ( empty( $file_path ) ) {
+		wp_send_json_error( array( 'message' => 'No file path provided' ) );
+	}
+
+	$full_path = ABSPATH . $file_path;
+
+	// Security check - file must exist and be within ABSPATH
+	if ( ! file_exists( $full_path ) || strpos( realpath( $full_path ), ABSPATH ) !== 0 ) {
+		wp_send_json_error( array( 'message' => 'File not found or access denied' ) );
+	}
+
+	// Read file content
+	$content = file_get_contents( $full_path );
+	if ( $content === false ) {
+		wp_send_json_error( array( 'message' => 'Failed to read file' ) );
+	}
+
+	// Get 10 lines before and after the threat line
+	$lines = explode( "\n", $content );
+	$total_lines = count( $lines );
+	
+	// Calculate range: 10 before, threat line, 10 after
+	$start_line = max( 1, $line_number - 10 );
+	$end_line = min( $total_lines, $line_number + 10 );
+	
+	// Build HTML with line numbers and highlighting
+	$html = '<pre>';
+	for ( $i = $start_line; $i <= $end_line; $i++ ) {
+		// Check if this line exists in array (0-indexed)
+		if ( ! isset( $lines[ $i - 1 ] ) ) {
+			continue;
+		}
+		
+		$is_threat_line = ( $i === $line_number );
+		
+		if ( $is_threat_line ) {
+			$html .= '<span class="highlight-line">';
+		}
+		
+		$html .= '<span class="line-numbers">' . str_pad( $i, 4, ' ', STR_PAD_LEFT ) . '</span>';
+		$html .= esc_html( $lines[ $i - 1 ] );
+		
+		if ( $is_threat_line ) {
+			$html .= '</span>';
+		}
+		
+		$html .= "\n";
+	}
+	$html .= '</pre>';
+
+	wp_send_json_success( array( 'html' => $html ) );
+} );
+
+/**
  * Add admin menu
  */
 function bearmor_admin_menu() {
@@ -312,6 +412,15 @@ function bearmor_admin_menu() {
 		'manage_options',
 		'bearmor-file-changes',
 		'bearmor_file_changes_page'
+	);
+
+	add_submenu_page(
+		'bearmor-security',
+		'Malware Alerts',
+		'Malware Alerts',
+		'manage_options',
+		'bearmor-malware-alerts',
+		'bearmor_malware_alerts_page'
 	);
 
 	add_submenu_page(
@@ -345,6 +454,17 @@ function bearmor_file_changes_page() {
 	}
 	
 	require_once BEARMOR_PLUGIN_DIR . 'admin/file-changes.php';
+}
+
+/**
+ * Malware Alerts page
+ */
+function bearmor_malware_alerts_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( 'Access denied' );
+	}
+	
+	require_once BEARMOR_PLUGIN_DIR . 'admin/malware-alerts.php';
 }
 
 /**

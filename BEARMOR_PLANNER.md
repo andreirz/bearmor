@@ -177,26 +177,34 @@ CREATE TABLE bearmor_file_changes (
 
 ---
 
-### 1D — Regex Malware Scan ⬜
-**Status:** Not Started  
+### 1D — Regex Malware Scan ✅
+**Status:** ✅ COMPLETED  
 **Priority:** High  
 **Dependencies:** 1A, 1C
 
 **Tasks:**
-- [ ] Create regex pattern library for suspicious code:
-  - [ ] `eval(`, `base64_decode(`, `gzinflate(`, `str_rot13(`
-  - [ ] Obfuscated variable patterns: `${'GLOBALS'}`, `$$`
-  - [ ] Shell execution: `exec(`, `system(`, `passthru(`, `shell_exec(`
-  - [ ] File operations: `file_put_contents(` with dynamic content
-  - [ ] Suspicious URLs: known malware domains
-  - [ ] Encoded payloads: long base64 strings, hex patterns
-- [ ] Scan PHP, JS, HTML files in core/plugins/themes
-- [ ] Admin UI: Malware Alerts page
-  - [ ] List suspicious files with: path, matched pattern, severity, timestamp
-  - [ ] Show code snippet with highlighted match
-  - [ ] Actions: [View Full File], [Mark Safe], [Lock File], [Quarantine]
-- [ ] False positive handling: whitelist patterns per file
-- [ ] Severity scoring: critical/high/medium/low
+- [x] Create regex pattern library for suspicious code:
+  - [x] `eval(`, `base64_decode(`, `gzinflate(`, `str_rot13(`
+  - [x] Obfuscated variable patterns: `${'GLOBALS'}`, `$$`
+  - [x] Shell execution: `exec(`, `system(`, `passthru(`, `shell_exec(`
+  - [x] File operations: `file_put_contents(` with dynamic content
+  - [x] Network operations: `curl_exec()`, `fsockopen()`, `file_get_contents(http)`
+  - [x] Encoded payloads: long base64 strings (200+ chars)
+  - [x] Combined patterns: `eval(base64_decode())`, `assert(base64_decode())`
+- [x] Scan PHP, JS, HTML files in core/plugins/themes
+- [x] Strip PHP comments to avoid false positives
+- [x] Map line numbers from stripped to original content
+- [x] Exclude WordPress core files (whitelist)
+- [x] Admin UI: Malware Alerts page
+  - [x] List suspicious files grouped by file with: path, pattern, severity, timestamp
+  - [x] Show code preview with 10 lines before/after, highlighted threat line
+  - [x] Actions: [Quarantine File], [Whitelist File]
+  - [x] Tooltips with pattern descriptions
+  - [x] Threat summary cards (Critical/High/Medium/Low counts)
+  - [x] Quarantined files table with restore functionality
+- [x] False positive handling: whitelist files permanently
+- [x] Severity scoring: critical/high/medium/low with color coding
+- [x] Dashboard widget: Last Scan with threat counts by severity
 
 **Files to Create:**
 ```
