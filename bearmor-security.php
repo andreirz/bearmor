@@ -124,6 +124,35 @@ function bearmor_activate() {
 		$wpdb->query( "ALTER TABLE {$table_name} ADD COLUMN description TEXT AFTER category" );
 	}
 
+	// Login attempts table
+	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_login_attempts (
+		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+		ip_address VARCHAR(45) NOT NULL,
+		username VARCHAR(60),
+		success TINYINT(1) DEFAULT 0,
+		attempted_at DATETIME NOT NULL,
+		user_agent TEXT,
+		country_code VARCHAR(2),
+		KEY ip_address (ip_address),
+		KEY attempted_at (attempted_at),
+		KEY success (success)
+	) $charset_collate;";
+	dbDelta( $sql );
+
+	// Blocked IPs table
+	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_blocked_ips (
+		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+		ip_address VARCHAR(45) NOT NULL UNIQUE,
+		blocked_at DATETIME NOT NULL,
+		expires_at DATETIME,
+		reason VARCHAR(255),
+		permanent TINYINT(1) DEFAULT 0,
+		blocked_by BIGINT UNSIGNED,
+		KEY expires_at (expires_at),
+		KEY permanent (permanent)
+	) $charset_collate;";
+	dbDelta( $sql );
+
 	// Create quarantine directory
 	$quarantine_dir = WP_CONTENT_DIR . '/bearmor-quarantine';
 	if ( ! file_exists( $quarantine_dir ) ) {
@@ -161,6 +190,12 @@ require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-file-actions.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-wporg-api.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-malware-patterns.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-malware-scanner.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-login-protection.php';
+
+/**
+ * Initialize login protection
+ */
+Bearmor_Login_Protection::init();
 
 /**
  * Show notice to run baseline scan
@@ -425,6 +460,15 @@ function bearmor_admin_menu() {
 
 	add_submenu_page(
 		'bearmor-security',
+		'Login Activity',
+		'Login Activity',
+		'manage_options',
+		'bearmor-login-activity',
+		'bearmor_login_activity_page'
+	);
+
+	add_submenu_page(
+		'bearmor-security',
 		'Settings',
 		'Settings',
 		'manage_options',
@@ -465,6 +509,17 @@ function bearmor_malware_alerts_page() {
 	}
 	
 	require_once BEARMOR_PLUGIN_DIR . 'admin/malware-alerts.php';
+}
+
+/**
+ * Login Activity page
+ */
+function bearmor_login_activity_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( 'Access denied' );
+	}
+	
+	require_once BEARMOR_PLUGIN_DIR . 'admin/login-activity.php';
 }
 
 /**

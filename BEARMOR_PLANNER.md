@@ -242,25 +242,30 @@ CREATE TABLE bearmor_malware_detections (
 
 ---
 
-### 1E — Brute-Force Lockout ⬜
-**Status:** Not Started  
+### 1E — Brute-Force Lockout ✅
+**Status:** ✅ COMPLETED (needs live testing for email/country)
 **Priority:** High  
 **Dependencies:** 1A
 
 **Tasks:**
-- [ ] Hook into `wp_authenticate` to track login attempts
-- [ ] Rate limiting per IP:
-  - [ ] 5 failed attempts → 5 min lockout
-  - [ ] 10 failed attempts → 30 min lockout
-  - [ ] 20 failed attempts → 24 hour lockout
-  - [ ] Exponential backoff algorithm
-- [ ] Store attempts in transients: `bearmor_login_attempts_{ip}`
-- [ ] Admin UI: Login Activity page
-  - [ ] Tabs: Failed Logins | Successful Logins | Blocked IPs
-  - [ ] Display: IP, username attempted, timestamp, country (if available)
-  - [ ] Actions: [Block IP Permanently], [Unblock IP], [Whitelist IP]
-- [ ] Whitelist functionality: never block admin IPs
-- [ ] Email notification for repeated failures (opt-in)
+- [x] Hook into login system to track login attempts
+- [x] Rate limiting per IP:
+  - [x] 5 failed attempts → 5 min lockout
+  - [x] 10 failed attempts → 30 min lockout
+  - [x] 20 failed attempts → 24 hour lockout
+  - [x] Progressive lockout algorithm (accumulates in 1 hour window)
+- [x] Store attempts in database (better than transients)
+- [x] Admin UI: Login Activity page
+  - [x] Single-page view (no tabs - better UX)
+  - [x] Combined failed & successful logins table
+  - [x] Display: IP, username, timestamp, status, user agent
+  - [x] Actions: [Block IP Permanently], [Unblock IP], [Whitelist IP]
+  - [x] Blocked & Whitelisted IPs section at top
+- [x] Whitelist functionality: never block whitelisted IPs
+- [x] Auto-cleanup: Keep last 1000 login attempts, remove expired blocks
+- [x] Clear failed attempts on unblock/block expiry
+- [ ] **Country detection (NEEDS LIVE TESTING)** - ip-api.com integration added
+- [ ] **Email notification (NEEDS LIVE TESTING)** - sends on 24h ban only
 
 **Files to Create:**
 ```
@@ -297,12 +302,13 @@ CREATE TABLE bearmor_blocked_ips (
 ```
 
 **Testing:**
-- [ ] Failed login tracked correctly
-- [ ] IP blocked after threshold
-- [ ] Exponential backoff works
-- [ ] Unblock IP works
-- [ ] Whitelist prevents blocking
-- [ ] Email notification sent (if enabled)
+- [x] Failed login tracked correctly
+- [x] IP blocked after threshold (5/10/20 attempts)
+- [x] Progressive lockout works (5min/30min/24h)
+- [x] Unblock IP works and clears counter
+- [x] Whitelist prevents blocking
+- [ ] **Country detection works on live server** (can't test on local)
+- [ ] **Email notification received on 24h ban** (can't test on local)
 
 ---
 
