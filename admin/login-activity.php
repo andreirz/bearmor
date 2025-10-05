@@ -148,10 +148,16 @@ $whitelist = get_option( 'bearmor_ip_whitelist', array() );
 								<?php endif; ?>
 							</td>
 							<td><code style="font-size: 11px;"><?php echo esc_html( $attempt->ip_address ); ?></code></td>
-							<td style="font-size: 16px;">
+							<td style="font-size: 20px;" title="<?php echo ! empty( $attempt->country_code ) ? esc_attr( $attempt->country_code ) : ''; ?>">
 								<?php 
 								if ( ! empty( $attempt->country_code ) ) {
-									echo esc_html( $attempt->country_code );
+									// Convert country code to flag emoji
+									$code = strtoupper( $attempt->country_code );
+									$flag = '';
+									for ( $i = 0; $i < 2; $i++ ) {
+										$flag .= mb_chr( ord( $code[ $i ] ) + 127397, 'UTF-8' );
+									}
+									echo $flag;
 								} else {
 									echo '<span style="color: #999;">-</span>';
 								}

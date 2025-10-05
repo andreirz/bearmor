@@ -74,9 +74,8 @@ class Bearmor_Login_Protection {
 					array( 'response' => 429 )
 				);
 			} else {
-				// Block expired, remove it and clear failed attempts
+				// Block expired, remove it (keep history)
 				self::unblock_ip( $ip );
-				self::clear_failed_attempts( $ip );
 			}
 		}
 	}
@@ -129,8 +128,8 @@ class Bearmor_Login_Protection {
 		$ip = self::get_client_ip();
 		self::log_attempt( $ip, $username, true );
 		
-		// Clear failed attempts for this IP on successful login
-		self::clear_failed_attempts( $ip );
+		// DON'T clear failed attempts - keep history for audit trail
+		// The counter will naturally reset since we count from last block
 	}
 
 	/**
@@ -203,7 +202,7 @@ class Bearmor_Login_Protection {
 	}
 
 	/**
-	 * Get failed attempts count for IP in last hour
+	 * Get failed attempts count for IP in last hour (since last block)
 	 *
 	 * @param string $ip IP address.
 	 * @return int Failed attempts count.
@@ -211,8 +210,18 @@ class Bearmor_Login_Protection {
 	private static function get_failed_attempts_count( $ip ) {
 		global $wpdb;
 		
-		// Count ALL failed attempts in last hour
+		// Get the most recent block time for this IP
+		$last_block_time = $wpdb->get_var( $wpdb->prepare(
+			"SELECT blocked_at FROM {$wpdb->prefix}bearmor_blocked_ips 
+			WHERE ip_address = %s 
+			ORDER BY blocked_at DESC 
+			LIMIT 1",
+			$ip
+		) );
+		
+		// Count failed attempts since last block OR in last hour (whichever is more recent)
 		$one_hour_ago = date( 'Y-m-d H:i:s', strtotime( '-1 hour' ) );
+		$cutoff_time = $last_block_time ? max( $last_block_time, $one_hour_ago ) : $one_hour_ago;
 		
 		return (int) $wpdb->get_var( $wpdb->prepare(
 			"SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_login_attempts 
@@ -220,7 +229,7 @@ class Bearmor_Login_Protection {
 			AND success = 0 
 			AND attempted_at > %s",
 			$ip,
-			$one_hour_ago
+			$cutoff_time
 		) );
 	}
 
@@ -306,8 +315,9 @@ class Bearmor_Login_Protection {
 			array( '%s' )
 		);
 		
-		// Clear failed attempts when manually unblocking
-		self::clear_failed_attempts( $ip );
+		// DON'T clear failed attempts - keep history for audit trail
+		// Only reset the counter for rate limiting purposes
+		// The history remains visible in Login Activity page
 	}
 
 	/**
