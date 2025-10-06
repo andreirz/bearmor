@@ -396,32 +396,32 @@ CREATE TABLE bearmor_user_profiles (
 
 ---
 
-### 1G — Hardening & Security Headers ⬜
-**Status:** Not Started  
+### 1G — Hardening & Security Headers ✅
+**Status:** Complete (SSL & WP_DEBUG not tested)
 **Priority:** High  
 **Dependencies:** 1A
 
 **Tasks:**
-- [ ] Security headers (via `send_headers` hook):
-  - [ ] `X-Frame-Options: SAMEORIGIN`
-  - [ ] `X-Content-Type-Options: nosniff`
-  - [ ] `Referrer-Policy: strict-origin-when-cross-origin`
-  - [ ] `Permissions-Policy: geolocation=(), microphone=(), camera=()`
-  - [ ] `X-XSS-Protection: 1; mode=block`
-- [ ] Hardening options:
-  - [ ] Force SSL (redirect HTTP → HTTPS)
-  - [ ] Disable file editing: `DISALLOW_FILE_EDIT`
-  - [ ] Disable WP_DEBUG in production
-  - [ ] Hide WP version (remove generator tags)
-  - [ ] Block user enumeration (`?author=` queries)
-  - [ ] Disable verbose login errors
-  - [ ] Disable XML-RPC (if not needed)
-- [ ] Admin UI: Hardening page
-  - [ ] Show pass/fail status for each hardening measure
-  - [ ] Toggle switches to enable/disable each
-  - [ ] [Apply Recommended Hardening] button (one-click)
-  - [ ] [Revert All] button
-- [ ] `.htaccess` modifications (with backup)
+- [x] Security headers (via `send_headers` hook):
+  - [x] `X-Frame-Options: SAMEORIGIN`
+  - [x] `X-Content-Type-Options: nosniff`
+  - [x] `Referrer-Policy: strict-origin-when-cross-origin`
+  - [x] `Permissions-Policy: geolocation=(), microphone=(), camera=()`
+  - [x] `X-XSS-Protection: 1; mode=block`
+- [x] Hardening options:
+  - [ ] Force SSL (redirect HTTP → HTTPS) - not tested yet
+  - [x] Disable file editing: `DISALLOW_FILE_EDIT`
+  - [ ] Disable WP_DEBUG in production - status only (read-only)
+  - [x] Hide WP version (remove generator tags)
+  - [x] Block user enumeration (`?author=` queries)
+  - [x] Disable verbose login errors
+  - [x] Disable XML-RPC (if not needed)
+- [x] Admin UI: Hardening page
+  - [x] Show pass/fail status for each hardening measure
+  - [x] Checkboxes to enable/disable each (with Save button)
+  - [x] [Apply Recommended Hardening] button (one-click)
+  - [x] [Disable All] button
+- [ ] `.htaccess` modifications (with backup) - not implemented
 
 **Files to Create:**
 ```

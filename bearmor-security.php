@@ -230,12 +230,14 @@ require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-malware-patterns.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-malware-scanner.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-login-protection.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-anomaly-detector.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-hardening.php';
 
 /**
- * Initialize login protection and anomaly detection
+ * Initialize security features
  */
 Bearmor_Login_Protection::init();
 Bearmor_Anomaly_Detector::init();
+Bearmor_Hardening::init();
 
 /**
  * Show notice to run baseline scan
@@ -518,6 +520,15 @@ function bearmor_admin_menu() {
 
 	add_submenu_page(
 		'bearmor-security',
+		'Hardening',
+		'Hardening',
+		'manage_options',
+		'bearmor-hardening',
+		'bearmor_hardening_page'
+	);
+
+	add_submenu_page(
+		'bearmor-security',
 		'Settings',
 		'Settings',
 		'manage_options',
@@ -580,6 +591,17 @@ function bearmor_login_anomalies_page() {
 	}
 	
 	require_once BEARMOR_PLUGIN_DIR . 'admin/login-anomalies.php';
+}
+
+/**
+ * Hardening page
+ */
+function bearmor_hardening_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( 'Access denied' );
+	}
+	
+	require_once BEARMOR_PLUGIN_DIR . 'admin/hardening.php';
 }
 
 /**
