@@ -444,27 +444,29 @@ admin/
 
 ---
 
-### 1H — Lock / Manual Quarantine ⬜
-**Status:** Not Started  
-**Priority:** High  
+### 1H — Lock / Manual Quarantine ❌ SKIPPED
+**Status:** Skipped - redundant with 1C/1D quarantine functionality
+**Priority:** ~~High~~ N/A
 **Dependencies:** 1C, 1D
 
 **Tasks:**
-- [ ] **Lock File:**
-  - [ ] Default mode: `chmod 000` (make unreadable)
-  - [ ] Safe Mode: rename file to `.locked` extension
-  - [ ] Store original permissions in DB
-- [ ] **Quarantine:**
-  - [ ] Create quarantine directory: `wp-content/bearmor-quarantine/`
-  - [ ] Move file to quarantine with timestamp
-  - [ ] Store original path in DB
-  - [ ] Protect quarantine directory (deny web access via .htaccess)
-- [ ] **Restore:**
-  - [ ] Restore from lock: revert permissions or rename back
-  - [ ] Restore from quarantine: move file back to original location
-  - [ ] Verify file integrity after restore
-- [ ] Admin UI: Quarantine page
-  - [ ] List quarantined files with: original path, quarantined date, reason
+- [-] **Lock File:**
+  - [-] Default mode: `chmod 000` (make unreadable)
+  - [-] Safe Mode: rename file to `.locked` extension
+  - [-] Store original permissions in DB
+- [-] **Quarantine:**
+  - [-] Create quarantine directory: `wp-content/bearmor-quarantine/`
+  - [-] Move file to quarantine with timestamp
+  - [-] Store original path in DB
+  - [-] Protect quarantine directory (deny web access via .htaccess)
+- [-] **Restore:**
+  - [-] Restore from lock: revert permissions or rename back
+  - [-] Restore from quarantine: move file back to original location
+  - [-] Verify file integrity after restore
+- [-] Admin UI: Quarantine page
+  - [-] List quarantined files with: original path, quarantined date, reason
+
+**Note:** Quarantine functionality integrated into scan results (1C/1D) instead of separate manual tool.
   - [ ] Actions: [Restore], [Delete Permanently], [Download]
   - [ ] Restore history log
 - [ ] Audit log: track all lock/quarantine/restore actions
