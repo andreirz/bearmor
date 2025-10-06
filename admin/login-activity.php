@@ -133,7 +133,7 @@ $whitelist = get_option( 'bearmor_ip_whitelist', array() );
 						<th style="width: 8%;">Country</th>
 						<th style="width: 12%;">Username</th>
 						<th style="width: 10%;">Time</th>
-						<th style="width: 30%;">User Agent</th>
+						<th style="width: 30%;">Browser</th>
 						<th style="width: 15%;">Actions</th>
 					</tr>
 				</thead>
@@ -165,7 +165,78 @@ $whitelist = get_option( 'bearmor_ip_whitelist', array() );
 							</td>
 							<td><?php echo esc_html( $attempt->username ); ?></td>
 							<td style="font-size: 11px; color: #666;"><?php echo esc_html( human_time_diff( strtotime( $attempt->attempted_at ), current_time( 'timestamp' ) ) . ' ago' ); ?></td>
-							<td style="font-size: 10px; color: #999;"><?php echo esc_html( substr( $attempt->user_agent, 0, 40 ) ); ?></td>
+							<td style="font-size: 12px;">
+								<?php
+								// Parse user agent
+								$ua = $attempt->user_agent;
+								$browser = 'Unknown';
+								$browser_version = '';
+								$os = 'Unknown';
+								$os_version = '';
+								
+								// Detect browser and version (check specific browsers first!)
+								if ( preg_match( '/OPR\/([0-9.]+)/', $ua, $matches ) ) {
+									$browser = 'Opera';
+									$browser_version = $matches[1];
+								} elseif ( preg_match( '/Edg\/([0-9.]+)/', $ua, $matches ) ) {
+									$browser = 'Edge';
+									$browser_version = $matches[1];
+								} elseif ( strpos( $ua, 'Vivaldi' ) !== false ) {
+									$browser = 'Vivaldi';
+									if ( preg_match( '/Vivaldi\/([0-9.]+)/', $ua, $matches ) ) {
+										$browser_version = $matches[1];
+									}
+								} elseif ( strpos( $ua, 'Brave' ) !== false ) {
+									$browser = 'Brave';
+								} elseif ( preg_match( '/Chrome\/([0-9.]+)/', $ua, $matches ) ) {
+									$browser = 'Chrome';
+									$browser_version = $matches[1];
+								} elseif ( preg_match( '/Firefox\/([0-9.]+)/', $ua, $matches ) ) {
+									$browser = 'Firefox';
+									$browser_version = $matches[1];
+								} elseif ( preg_match( '/Version\/([0-9.]+).*Safari/', $ua, $matches ) ) {
+									$browser = 'Safari';
+									$browser_version = $matches[1];
+								}
+								
+								// Detect OS and version
+								if ( preg_match( '/Windows NT ([0-9.]+)/', $ua, $matches ) ) {
+									$os = 'Windows';
+									$os_version = $matches[1];
+								} elseif ( preg_match( '/Mac OS X ([0-9_]+)/', $ua, $matches ) ) {
+									$os = 'macOS';
+									$os_version = str_replace( '_', '.', $matches[1] );
+								} elseif ( preg_match( '/Android ([0-9.]+)/', $ua, $matches ) ) {
+									$os = 'Android';
+									$os_version = $matches[1];
+								} elseif ( preg_match( '/iPhone OS ([0-9_]+)/', $ua, $matches ) ) {
+									$os = 'iOS';
+									$os_version = str_replace( '_', '.', $matches[1] );
+								} elseif ( strpos( $ua, 'Ubuntu' ) !== false ) {
+									$os = 'Ubuntu';
+								} elseif ( strpos( $ua, 'Linux' ) !== false ) {
+									$os = 'Linux';
+								}
+								
+								// Display with icon
+								$icon_color = '#666';
+								if ( $browser === 'Chrome' ) $icon_color = '#4285f4';
+								if ( $browser === 'Firefox' ) $icon_color = '#ff7139';
+								if ( $browser === 'Safari' ) $icon_color = '#006cff';
+								if ( $browser === 'Edge' ) $icon_color = '#0078d7';
+								
+								echo '<span class="dashicons dashicons-desktop" style="color: ' . esc_attr( $icon_color ) . '; font-size: 14px; width: 14px; height: 14px;"></span> ';
+								echo '<strong>' . esc_html( $browser ) . '</strong>';
+								if ( $browser_version ) {
+									echo ' <span style="color: #999; font-size: 10px;">v' . esc_html( substr( $browser_version, 0, strpos( $browser_version, '.' ) !== false ? strpos( $browser_version, '.' ) + 2 : strlen( $browser_version ) ) ) . '</span>';
+								}
+								echo '<br><span style="color: #999; font-size: 10px;">' . esc_html( $os );
+								if ( $os_version ) {
+									echo ' ' . esc_html( substr( $os_version, 0, 5 ) );
+								}
+								echo '</span>';
+								?>
+							</td>
 							<td>
 								<form method="post" style="display: inline;">
 									<?php wp_nonce_field( 'bearmor_block_ip' ); ?>

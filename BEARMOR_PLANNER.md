@@ -312,39 +312,45 @@ CREATE TABLE bearmor_blocked_ips (
 
 ---
 
-### 1F — Login Anomaly Detection ⬜
-**Status:** Not Started  
+### 1F — Login Anomaly Detection 🔄
+**Status:** Partially Complete (needs live server testing)
 **Priority:** Medium  
 **Dependencies:** 1E
 
 **Tasks:**
-- [ ] Track user login patterns:
-  - [ ] Usual IP addresses
-  - [ ] Usual countries/locations
-  - [ ] Usual devices/user agents
-  - [ ] Usual login times
+- [x] Track user login patterns:
+  - [x] Usual IP addresses
+  - [x] Usual countries/locations (code ready, needs live testing)
+  - [x] Usual devices/user agents (tested ✅)
+  - [x] Usual login times
 - [ ] Detect anomalies:
-  - [ ] **Impossible travel:** Login from different countries within short time
-  - [ ] **TOR/VPN detection:** Known TOR exit nodes, datacenter IPs
-  - [ ] **First-time country:** Login from never-before-seen country
-  - [ ] **New device:** Unknown user agent
-  - [ ] **Unusual time:** Login at 3 AM when user typically logs in at 9 AM
-- [ ] Scoring system: anomaly score 0-100
-- [ ] Dashboard alert widget for critical anomalies (score > 80)
-- [ ] Admin UI: Login Anomalies page
-  - [ ] List anomalies with: user, IP, country, device, anomaly type, score, timestamp
-  - [ ] Actions: [Mark Safe], [Block IP], [Force Password Reset]
-- [ ] Optional email notification for critical anomalies
+  - [ ] **Impossible travel:** Login from different countries within short time (code ready, needs live testing)
+  - [ ] **TOR/VPN detection:** Known TOR exit nodes, datacenter IPs (NOT IMPLEMENTED)
+  - [ ] **First-time country:** Login from never-before-seen country (code ready, needs live testing)
+  - [x] **New device:** Unknown user agent (tested ✅ - Opera detected as different from Chrome)
+  - [x] **Unusual time:** Login at 3 AM when user typically logs in at 9 AM (code ready, needs testing)
+- [x] Scoring system: anomaly score 0-100 (tested ✅)
+- [x] Dashboard alert widget for critical anomalies (score > 80) (tested ✅)
+- [x] Admin UI: Login Anomalies page
+  - [x] List anomalies with: user, IP, country, device, anomaly type, score, timestamp (tested ✅)
+  - [x] Actions: [Mark Safe], [Block IP] (tested ✅)
+  - [ ] Actions: [Force Password Reset] (NOT IMPLEMENTED)
+- [x] Email notification for critical anomalies (code ready, needs live testing)
 
-**Files to Create:**
+**Files Created:**
 ```
 includes/
-├── class-bearmor-anomaly-detector.php
-├── class-bearmor-geolocation.php (free IP geolocation API)
-└── class-bearmor-user-profile.php
+├── class-bearmor-anomaly-detector.php ✅ (created, includes user profile tracking)
 admin/
-└── login-anomalies.php
+└── login-anomalies.php ✅ (created)
+admin/partials/
+└── widget-anomalies.php ✅ (updated with real data)
 ```
+
+**Notes:**
+- GeoIP integrated into existing login-protection class (uses ip-api.com)
+- User profile tracking integrated into anomaly-detector class
+- Browser detection improved: Opera, Edge, Vivaldi, Brave all detected separately from Chrome
 
 **Database Schema:**
 ```sql
@@ -376,12 +382,17 @@ CREATE TABLE bearmor_user_profiles (
 ```
 
 **Testing:**
-- [ ] Normal login builds user profile
-- [ ] Impossible travel detected
-- [ ] TOR node detected
-- [ ] New country flagged
-- [ ] Mark Safe updates profile
-- [ ] Email sent for critical anomalies
+- [x] Normal login builds user profile (tested ✅)
+- [ ] Impossible travel detected (needs live server with VPN)
+- [ ] TOR node detected (NOT IMPLEMENTED)
+- [ ] New country flagged (needs live server with VPN)
+- [x] New device detected (tested ✅ - Opera vs Chrome)
+- [x] Anomaly logged to database (tested ✅)
+- [x] Anomaly displayed on admin page (tested ✅)
+- [x] Mark Safe action works (tested ✅)
+- [x] Block IP action works (tested ✅)
+- [x] Dashboard widget shows anomalies (tested ✅)
+- [ ] Email sent for critical anomalies (needs live server)
 
 ---
 

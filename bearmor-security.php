@@ -153,6 +153,44 @@ function bearmor_activate() {
 	) $charset_collate;";
 	dbDelta( $sql );
 
+	// Login anomalies table
+	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_login_anomalies (
+		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+		user_id BIGINT UNSIGNED NOT NULL,
+		ip_address VARCHAR(45) NOT NULL,
+		country_code VARCHAR(2),
+		user_agent TEXT,
+		anomaly_type VARCHAR(50) NOT NULL,
+		anomaly_score INT NOT NULL,
+		details TEXT,
+		detected_at DATETIME NOT NULL,
+		status ENUM('new', 'marked_safe', 'blocked') DEFAULT 'new',
+		action_by BIGINT UNSIGNED,
+		KEY user_id (user_id),
+		KEY detected_at (detected_at),
+		KEY anomaly_score (anomaly_score),
+		KEY status (status)
+	) $charset_collate;";
+	dbDelta( $sql );
+
+	// User profiles table (for tracking normal behavior)
+	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_user_profiles (
+		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+		user_id BIGINT UNSIGNED NOT NULL,
+		known_ips TEXT,
+		known_countries TEXT,
+		known_user_agents TEXT,
+		typical_login_hours VARCHAR(255),
+		last_login_at DATETIME,
+		last_login_ip VARCHAR(45),
+		last_login_country VARCHAR(2),
+		profile_created DATETIME NOT NULL,
+		profile_updated DATETIME NOT NULL,
+		UNIQUE KEY user_id (user_id),
+		KEY user_id_index (user_id)
+	) $charset_collate;";
+	dbDelta( $sql );
+
 	// Create quarantine directory
 	$quarantine_dir = WP_CONTENT_DIR . '/bearmor-quarantine';
 	if ( ! file_exists( $quarantine_dir ) ) {
@@ -191,11 +229,13 @@ require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-wporg-api.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-malware-patterns.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-malware-scanner.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-login-protection.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-anomaly-detector.php';
 
 /**
- * Initialize login protection
+ * Initialize login protection and anomaly detection
  */
 Bearmor_Login_Protection::init();
+Bearmor_Anomaly_Detector::init();
 
 /**
  * Show notice to run baseline scan
@@ -469,6 +509,15 @@ function bearmor_admin_menu() {
 
 	add_submenu_page(
 		'bearmor-security',
+		'Login Anomalies',
+		'Login Anomalies',
+		'manage_options',
+		'bearmor-login-anomalies',
+		'bearmor_login_anomalies_page'
+	);
+
+	add_submenu_page(
+		'bearmor-security',
 		'Settings',
 		'Settings',
 		'manage_options',
@@ -520,6 +569,17 @@ function bearmor_login_activity_page() {
 	}
 	
 	require_once BEARMOR_PLUGIN_DIR . 'admin/login-activity.php';
+}
+
+/**
+ * Login Anomalies page
+ */
+function bearmor_login_anomalies_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( 'Access denied' );
+	}
+	
+	require_once BEARMOR_PLUGIN_DIR . 'admin/login-anomalies.php';
 }
 
 /**
