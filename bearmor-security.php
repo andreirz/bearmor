@@ -191,6 +191,23 @@ function bearmor_activate() {
 	) $charset_collate;";
 	dbDelta( $sql );
 
+	// Activity log table
+	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_activity_log (
+		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+		user_id BIGINT UNSIGNED NOT NULL,
+		username VARCHAR(60) NOT NULL,
+		action VARCHAR(50) NOT NULL,
+		object_type VARCHAR(50),
+		object_name VARCHAR(255),
+		ip_address VARCHAR(45),
+		user_agent TEXT,
+		created_at DATETIME NOT NULL,
+		INDEX idx_user_id (user_id),
+		INDEX idx_action (action),
+		INDEX idx_created_at (created_at)
+	) $charset_collate;";
+	dbDelta( $sql );
+
 	// Create quarantine directory
 	$quarantine_dir = WP_CONTENT_DIR . '/bearmor-quarantine';
 	if ( ! file_exists( $quarantine_dir ) ) {
@@ -232,6 +249,7 @@ require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-login-protection.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-anomaly-detector.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-hardening.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-2fa.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-activity-log.php';
 
 /**
  * Initialize security features
@@ -240,6 +258,7 @@ Bearmor_Login_Protection::init();
 Bearmor_Anomaly_Detector::init();
 Bearmor_Hardening::init();
 Bearmor_2FA::init();
+Bearmor_Activity_Log::init();
 
 /**
  * Show notice to run baseline scan
@@ -531,6 +550,15 @@ function bearmor_admin_menu() {
 
 	add_submenu_page(
 		'bearmor-security',
+		'Activity Log',
+		'Activity Log',
+		'manage_options',
+		'bearmor-activity-log',
+		'bearmor_activity_log_page'
+	);
+
+	add_submenu_page(
+		'bearmor-security',
 		'Settings',
 		'Settings',
 		'manage_options',
@@ -604,6 +632,17 @@ function bearmor_hardening_page() {
 	}
 	
 	require_once BEARMOR_PLUGIN_DIR . 'admin/hardening.php';
+}
+
+/**
+ * Activity Log page
+ */
+function bearmor_activity_log_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( 'Access denied' );
+	}
+	
+	require_once BEARMOR_PLUGIN_DIR . 'admin/activity-log.php';
 }
 
 /**
