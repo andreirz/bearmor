@@ -231,6 +231,7 @@ require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-malware-scanner.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-login-protection.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-anomaly-detector.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-hardening.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-2fa.php';
 
 /**
  * Initialize security features
@@ -238,6 +239,7 @@ require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-hardening.php';
 Bearmor_Login_Protection::init();
 Bearmor_Anomaly_Detector::init();
 Bearmor_Hardening::init();
+Bearmor_2FA::init();
 
 /**
  * Show notice to run baseline scan

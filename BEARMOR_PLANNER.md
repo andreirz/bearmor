@@ -520,30 +520,32 @@ CREATE TABLE bearmor_audit_log (
 
 ---
 
-### 1I — Notifications ⬜
-**Status:** Not Started  
-**Priority:** Medium  
+### 1I — Notifications ❌ SKIPPED
+**Status:** Skipped - critical emails already implemented, dashboard notifications not needed
+**Priority:** ~~Medium~~ N/A
 **Dependencies:** 1A, 1C, 1D, 1E, 1F
 
 **Tasks:**
-- [ ] Notification system:
-  - [ ] Dashboard notifications (always on)
-  - [ ] Email notifications (opt-in)
-  - [ ] Notification types: info, warning, critical
-- [ ] Trigger notifications for:
-  - [ ] Malware detected (critical)
-  - [ ] File tampering (warning)
-  - [ ] Repeated brute-force attempts (warning)
-  - [ ] Login anomaly (critical)
-  - [ ] Vulnerable plugin detected (warning) — Paid
-  - [ ] License check failed (warning) — Paid
-  - [ ] Uptime downtime (critical) — Paid
-- [ ] Admin UI: Notifications page
-  - [ ] List all notifications with: type, message, timestamp, status
-  - [ ] Actions: [Mark Read], [Dismiss], [Clear All]
-  - [ ] Filter by type and date
-- [ ] Email template: branded, clear, actionable
-- [ ] Rate limiting: don't spam emails (max 1 per hour per type)
+- [-] Notification system:
+  - [-] Dashboard notifications (always on)
+  - [-] Email notifications (opt-in)
+  - [-] Notification types: info, warning, critical
+- [-] Trigger notifications for:
+  - [-] Malware detected (critical)
+  - [-] File tampering (warning)
+  - [-] Repeated brute-force attempts (warning)
+  - [-] Login anomaly (critical)
+  - [-] Vulnerable plugin detected (warning) — Paid
+  - [-] License check failed (warning) — Paid
+  - [-] Uptime downtime (critical) — Paid
+- [-] Admin UI: Notifications page
+  - [-] List all notifications with: type, message, timestamp, status
+  - [-] Actions: [Mark Read], [Dismiss], [Clear All]
+  - [-] Filter by type and date
+- [-] Email template: branded, clear, actionable
+- [-] Rate limiting: don't spam emails (max 1 per hour per type)
+
+**Note:** Critical emails (24h IP ban, login anomalies) already implemented in 1E/1F. Dashboard notifications not needed. File change emails too spammy.
 
 **Files to Create:**
 ```
@@ -583,31 +585,41 @@ CREATE TABLE bearmor_notifications (
 
 ---
 
-### 1J — 2FA (Simple, Free Tier) ⬜
-**Status:** Not Started  
+### 1J — 2FA (Simple, Free Tier) ✅
+**Status:** Complete (needs live server testing for email)
 **Priority:** Low  
 **Dependencies:** 1A
 
 **Tasks:**
-- [ ] Email-based one-time code (6 digits)
-- [ ] Hook into login flow: after password validation
-- [ ] Generate code, store in transient (5 min expiry)
-- [ ] Send code via email
-- [ ] Verification page: enter code
-- [ ] Admin UI: 2FA Settings
-  - [ ] Toggle: Enable/Disable 2FA
-  - [ ] Per-user setting (user profile page)
-  - [ ] Backup codes (generate 10 codes for emergency access)
-- [ ] Remember device option (30 days cookie)
+- [x] Email-based one-time code (6 digits)
+- [x] Hook into login flow: after password validation
+- [x] Generate code, store in transient (10 min expiry - changed from 5)
+- [ ] Send code via email - **NOT TESTED** (local dev, no email)
+- [x] Verification page: enter code
+- [x] Admin UI: 2FA Settings
+  - [x] Toggle: Enable/Disable 2FA (global)
+  - [x] Per-user exclusion list (in plugin settings, not WP profile)
+  - [-] Backup codes - **SKIPPED** (users won't keep them, easy to recover via DB/FTP)
+- [x] Remember device option (30 days cookie)
 
-**Files to Create:**
+**Files Created:**
 ```
 includes/
-├── class-bearmor-2fa.php
-└── class-bearmor-2fa-email.php
+├── class-bearmor-2fa.php ✅
 admin/
-└── 2fa-settings.php
+└── settings.php (2FA section added) ✅
 ```
+
+**Testing:**
+- [x] 2FA toggle in settings works
+- [x] User list shows/hides correctly
+- [x] User exclusion saves correctly
+- [x] Login flow hooks work
+- [x] Code generation works
+- [x] Verification form displays
+- [x] Remember device checkbox present
+- [ ] **Email sending** - needs live server test
+- [ ] **Full login flow** - needs live server test
 
 **Database Schema:**
 ```sql

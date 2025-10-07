@@ -18,6 +18,22 @@ if ( isset( $_POST['bearmor_save_settings'] ) && check_admin_referer( 'bearmor_s
 	$settings['auto_quarantine'] = isset( $_POST['auto_quarantine'] ) ? true : false;
 	$settings['auto_disable_vulnerable'] = isset( $_POST['auto_disable_vulnerable'] ) ? true : false;
 	update_option( 'bearmor_settings', $settings );
+	
+	// Save 2FA settings
+	update_option( 'bearmor_2fa_enabled', isset( $_POST['bearmor_2fa_enabled'] ) );
+	
+	// Save excluded users
+	$excluded_users = array();
+	if ( isset( $_POST['bearmor_2fa_users'] ) && is_array( $_POST['bearmor_2fa_users'] ) ) {
+		$all_users = get_users( array( 'fields' => 'ID' ) );
+		foreach ( $all_users as $user_id ) {
+			if ( ! in_array( $user_id, $_POST['bearmor_2fa_users'] ) ) {
+				$excluded_users[] = $user_id;
+			}
+		}
+	}
+	update_option( 'bearmor_2fa_excluded_users', $excluded_users );
+	
 	echo '<div class="notice notice-success"><p>Settings saved!</p></div>';
 }
 
@@ -77,6 +93,75 @@ $settings = get_option( 'bearmor_settings', array() );
 				</td>
 			</tr>
 		</table>
+
+		<h2>🔐 Two-Factor Authentication (2FA)</h2>
+		<p class="description">Add an extra layer of security by requiring a verification code sent to email after password login.</p>
+		<table class="form-table">
+			<tr>
+				<th>Enable 2FA</th>
+				<td>
+					<label>
+						<input type="checkbox" name="bearmor_2fa_enabled" value="1" <?php checked( get_option( 'bearmor_2fa_enabled', false ) ); ?> id="bearmor_2fa_toggle">
+						Require two-factor authentication for all users
+					</label>
+					<p class="description">When enabled, users must enter a code sent to their email after logging in with their password.</p>
+				</td>
+			</tr>
+		</table>
+
+		<?php
+		$is_2fa_enabled = get_option( 'bearmor_2fa_enabled', false );
+		$excluded_users = get_option( 'bearmor_2fa_excluded_users', array() );
+		?>
+
+		<div id="bearmor_2fa_users_section" style="<?php echo $is_2fa_enabled ? '' : 'display:none;'; ?>">
+			<h3>Users with 2FA</h3>
+			<p class="description">Uncheck users to exclude them from 2FA requirement.</p>
+			<table class="widefat striped">
+				<thead>
+					<tr>
+						<th style="width: 50px;">Enabled</th>
+						<th>Username</th>
+						<th>Email</th>
+						<th>Role</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php
+					$users = get_users();
+					foreach ( $users as $user ) :
+						$is_excluded = in_array( $user->ID, $excluded_users );
+					?>
+						<tr>
+							<td>
+								<input type="checkbox" 
+									   name="bearmor_2fa_users[]" 
+									   value="<?php echo esc_attr( $user->ID ); ?>" 
+									   <?php checked( ! $is_excluded ); ?>>
+							</td>
+							<td>
+								<strong><?php echo esc_html( $user->user_login ); ?></strong>
+								<?php if ( $user->ID === get_current_user_id() ) : ?>
+									<span style="color: #666;">(you)</span>
+								<?php endif; ?>
+							</td>
+							<td><?php echo esc_html( $user->user_email ); ?></td>
+							<td><?php echo esc_html( implode( ', ', $user->roles ) ); ?></td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+			<p class="description" style="margin-top: 10px;">
+				<strong>Note:</strong> Users will need to enter a 6-digit code sent to their email after logging in. 
+				Codes expire in 10 minutes. Users can choose to remember their device for 30 days.
+			</p>
+		</div>
+
+		<script>
+			document.getElementById('bearmor_2fa_toggle').addEventListener('change', function() {
+				document.getElementById('bearmor_2fa_users_section').style.display = this.checked ? 'block' : 'none';
+			});
+		</script>
 
 		<p>
 			<button type="submit" name="bearmor_save_settings" class="button button-primary">Save & Apply</button>
