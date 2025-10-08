@@ -3,7 +3,7 @@
  * Plugin Name: Bearmor Security
  * Plugin URI: https://bearmor.com
  * Description: Lightweight, robust WordPress security plugin for SMBs.
- * Version: 0.1.6
+ * Version: 0.1.7
  * Author: Bearmor Security Team
  * Author URI: https://bearmor.com
  * License: GPL v2 or later
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'BEARMOR_VERSION', '0.1.6' );
+define( 'BEARMOR_VERSION', '0.1.7' );
 define( 'BEARMOR_PLUGIN_FILE', __FILE__ );
 define( 'BEARMOR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BEARMOR_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -208,6 +208,27 @@ function bearmor_activate() {
 	) $charset_collate;";
 	dbDelta( $sql );
 
+	// Vulnerabilities table
+	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_vulnerabilities (
+		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+		item_slug VARCHAR(255) NOT NULL,
+		item_name VARCHAR(255) NOT NULL,
+		item_version VARCHAR(50) NOT NULL,
+		item_type ENUM('plugin', 'theme', 'core') DEFAULT 'plugin',
+		severity ENUM('critical', 'high', 'medium', 'low') NOT NULL,
+		title VARCHAR(255) NOT NULL,
+		description TEXT,
+		fixed_in VARCHAR(50),
+		cve_references TEXT,
+		detected_at DATETIME NOT NULL,
+		status ENUM('active', 'whitelisted', 'fixed') DEFAULT 'active',
+		KEY item_slug (item_slug),
+		KEY severity (severity),
+		KEY status (status),
+		KEY detected_at (detected_at)
+	) $charset_collate;";
+	dbDelta( $sql );
+
 	// Create quarantine directory
 	$quarantine_dir = WP_CONTENT_DIR . '/bearmor-quarantine';
 	if ( ! file_exists( $quarantine_dir ) ) {
@@ -250,6 +271,8 @@ require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-anomaly-detector.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-hardening.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-2fa.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-activity-log.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-wpvulnerability-api.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-vulnerability-scanner.php';
 
 /**
  * Initialize security features
@@ -259,6 +282,7 @@ Bearmor_Anomaly_Detector::init();
 Bearmor_Hardening::init();
 Bearmor_2FA::init();
 Bearmor_Activity_Log::init();
+Bearmor_Vulnerability_Scanner::init();
 
 /**
  * Show notice to run baseline scan
@@ -559,6 +583,15 @@ function bearmor_admin_menu() {
 
 	add_submenu_page(
 		'bearmor-security',
+		'Vulnerabilities',
+		'Vulnerabilities',
+		'manage_options',
+		'bearmor-vulnerabilities',
+		'bearmor_vulnerabilities_page'
+	);
+
+	add_submenu_page(
+		'bearmor-security',
 		'Settings',
 		'Settings',
 		'manage_options',
@@ -643,6 +676,17 @@ function bearmor_activity_log_page() {
 	}
 	
 	require_once BEARMOR_PLUGIN_DIR . 'admin/activity-log.php';
+}
+
+/**
+ * Vulnerabilities page
+ */
+function bearmor_vulnerabilities_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( 'Access denied' );
+	}
+	
+	require_once BEARMOR_PLUGIN_DIR . 'admin/vulnerabilities.php';
 }
 
 /**

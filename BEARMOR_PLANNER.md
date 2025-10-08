@@ -690,22 +690,25 @@ admin/
 
 ## Part 2 — Paid Tier (Advanced Features)
 
-### 2A — WPVulnerability Integration ⬜
-**Status:** Not Started  
+### 2A — WPVulnerability Integration ✅
+**Status:** COMPLETED  
 **Priority:** High  
 **Dependencies:** 1A, 3A (call-home for Pro check)
 
 **Tasks:**
-- [ ] Integrate WPVulnerability API (or WPScan API)
-- [ ] Scan active plugins, themes, WP core
-- [ ] API request: send slug + version
-- [ ] Cache results for 24 hours (transient)
-- [ ] Admin UI: Vulnerabilities page
-  - [ ] List vulnerabilities with: plugin/theme name, version, severity, CVE, description, fix
-  - [ ] Actions: [Update Now], [Disable Now], [Whitelist], [View Details]
-  - [ ] Filter by severity: critical/high/medium/low
-- [ ] Dashboard widget: vulnerability count + top critical
-- [ ] Email notification for critical vulnerabilities (opt-in)
+- [x] Integrate WPVulnerability API (wpvulnerability.net)
+- [x] Scan active plugins, themes (WP core not needed - auto-updates)
+- [x] API request: send slug + version
+- [x] Cache results for 24 hours (transient)
+- [x] Admin UI: Vulnerabilities page
+  - [x] List vulnerabilities with: plugin/theme name, version, severity, CVE, description, fix
+  - [x] Actions: [Update Now], [Disable Plugin] (removed Whitelist - bad practice)
+  - [x] Filter by severity: critical/high/medium/low
+  - [x] Grouped by plugin/theme with vulnerability count
+  - [x] View more/less for long descriptions
+- [x] Daily auto-scan via WP cron
+- [x] Manual "Scan Now" button (force refresh)
+- [ ] Email notification for critical vulnerabilities (implemented, needs production testing)
 
 **Files to Create:**
 ```
