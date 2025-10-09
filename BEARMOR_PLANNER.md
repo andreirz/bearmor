@@ -53,12 +53,6 @@ bearmor-security/
     └── js/admin-script.js
 ```
 
-**Testing:**
-- [x] Plugin activates without errors
-- [x] Admin menu appears for admin users only
-- [x] Settings save and persist correctly
-- [ ] Uninstall cleans up options (deferred)
-
 ---
 
 ### 1B — Dashboard ✅
@@ -95,12 +89,6 @@ admin/
     ├── widget-ai-summary.php (paid)
     └── widget-uptime.php (paid)
 ```
-
-**Testing:**
-- [x] Dashboard loads without errors
-- [x] Widgets display correct data
-- [x] Action buttons moved to detail pages
-- [x] Paid features show upgrade prompts for free users
 
 ---
 
@@ -167,14 +155,6 @@ CREATE TABLE bearmor_file_changes (
 );
 ```
 
-**Testing:**
-- [ ] Baseline scan completes successfully
-- [ ] Modified file detected correctly
-- [ ] Lock file works (rename in Safe Mode)
-- [ ] Quarantine moves file correctly
-- [ ] Restore from quarantine works
-- [ ] Mark Safe ignores file in future scans
-
 ---
 
 ### 1D — Regex Malware Scan ✅
@@ -232,13 +212,6 @@ CREATE TABLE bearmor_malware_detections (
   INDEX status (status)
 );
 ```
-
-**Testing:**
-- [ ] Scan detects known malware patterns
-- [ ] False positives can be marked safe
-- [ ] Severity scoring works correctly
-- [ ] Lock/quarantine actions work
-- [ ] Whitelist prevents repeated alerts
 
 ---
 
@@ -300,15 +273,6 @@ CREATE TABLE bearmor_blocked_ips (
   permanent TINYINT(1) DEFAULT 0
 );
 ```
-
-**Testing:**
-- [x] Failed login tracked correctly
-- [x] IP blocked after threshold (5/10/20 attempts)
-- [x] Progressive lockout works (5min/30min/24h)
-- [x] Unblock IP works and clears counter
-- [x] Whitelist prevents blocking
-- [ ] **Country detection works on live server** (can't test on local)
-- [ ] **Email notification received on 24h ban** (can't test on local)
 
 ---
 
@@ -381,19 +345,6 @@ CREATE TABLE bearmor_user_profiles (
 );
 ```
 
-**Testing:**
-- [x] Normal login builds user profile (tested ✅)
-- [ ] Impossible travel detected (needs live server with VPN)
-- [ ] TOR node detected (NOT IMPLEMENTED)
-- [ ] New country flagged (needs live server with VPN)
-- [x] New device detected (tested ✅ - Opera vs Chrome)
-- [x] Anomaly logged to database (tested ✅)
-- [x] Anomaly displayed on admin page (tested ✅)
-- [x] Mark Safe action works (tested ✅)
-- [x] Block IP action works (tested ✅)
-- [x] Dashboard widget shows anomalies (tested ✅)
-- [ ] Email sent for critical anomalies (needs live server)
-
 ---
 
 ### 1G — Hardening & Security Headers ✅
@@ -432,15 +383,6 @@ includes/
 admin/
 └── hardening.php
 ```
-
-**Testing:**
-- [ ] Security headers present in response
-- [ ] SSL redirect works
-- [ ] File editing disabled in admin
-- [ ] WP version hidden
-- [ ] User enumeration blocked
-- [ ] XML-RPC disabled (if toggled)
-- [ ] .htaccess backup created before modification
 
 ---
 
@@ -509,15 +451,6 @@ CREATE TABLE bearmor_audit_log (
 );
 ```
 
-**Testing:**
-- [ ] Lock file works (both modes)
-- [ ] Quarantine moves file correctly
-- [ ] Quarantine directory protected from web access
-- [ ] Restore from lock works
-- [ ] Restore from quarantine works
-- [ ] Audit log records all actions
-- [ ] Delete permanently removes file
-
 ---
 
 ### 1I — Notifications ❌ SKIPPED
@@ -576,13 +509,6 @@ CREATE TABLE bearmor_notifications (
 );
 ```
 
-**Testing:**
-- [ ] Dashboard notification appears
-- [ ] Email sent (if enabled)
-- [ ] Rate limiting prevents spam
-- [ ] Mark read/dismiss works
-- [ ] Notifications filtered correctly
-
 ---
 
 ### 1J — 2FA (Simple, Free Tier) ✅
@@ -610,81 +536,38 @@ admin/
 └── settings.php (2FA section added) ✅
 ```
 
-**Testing:**
-- [x] 2FA toggle in settings works
-- [x] User list shows/hides correctly
-- [x] User exclusion saves correctly
-- [x] Login flow hooks work
-- [x] Code generation works
-- [x] Verification form displays
-- [x] Remember device checkbox present
-- [ ] **Email sending** - needs live server test
-- [ ] **Full login flow** - needs live server test
-
-**Database Schema:**
-```sql
-CREATE TABLE bearmor_2fa_codes (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  user_id BIGINT UNSIGNED NOT NULL,
-  code VARCHAR(6) NOT NULL,
-  created_at DATETIME NOT NULL,
-  expires_at DATETIME NOT NULL,
-  used TINYINT(1) DEFAULT 0,
-  INDEX user_id (user_id),
-  INDEX expires_at (expires_at)
-);
-
-CREATE TABLE bearmor_2fa_backup_codes (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  user_id BIGINT UNSIGNED NOT NULL,
-  code VARCHAR(20) NOT NULL,
-  used TINYINT(1) DEFAULT 0,
-  INDEX user_id (user_id)
-);
-```
-
-**Testing:**
-- [ ] 2FA code sent via email
-- [ ] Code verification works
-- [ ] Code expires after 5 min
-- [ ] Backup codes work
-- [ ] Remember device works (30 days)
-- [ ] 2FA can be disabled per user
-
 ---
 
-### 1K — Admin Action Logging ⬜
-**Status:** Not Started  
+### 1K — Admin Action Logging ✅
+**Status:** COMPLETE  
 **Priority:** Low  
 **Dependencies:** 1H
 
 **Tasks:**
-- [ ] Extend audit log from 1H
-- [ ] Track all manual/admin actions:
-  - [ ] Lock/unlock file
-  - [ ] Quarantine/restore file
-  - [ ] Mark safe (malware/anomaly)
-  - [ ] Disable/enable plugin
-  - [ ] Block/unblock IP
-  - [ ] Apply hardening
-  - [ ] Change settings
-- [ ] Admin UI: Audit Log page
-  - [ ] List all actions with: action, target, user, timestamp, details
-  - [ ] Filter by action type, user, date range
-  - [ ] Export to CSV
-- [ ] Retention policy: keep logs for 90 days (configurable)
+- [x] Activity logging system (`Bearmor_Activity_Log` class)
+- [x] Database table created (`bearmor_activity_log`)
+- [x] Track WordPress events:
+  - [x] Login/Logout
+  - [x] Plugin activated/deactivated/installed/deleted
+  - [x] Theme switched
+  - [x] User created/deleted
+- [x] Track file actions (via `Bearmor_Helpers::log_audit()`):
+  - [x] Lock/unlock file
+  - [x] Quarantine/restore file
+  - [x] Mark safe (malware/anomaly)
+- [x] Admin UI: Activity Log page
+  - [x] List all actions with: user, action, details, IP, timestamp
+  - [x] Filter by action type and user
+  - [x] Search functionality
+  - [x] Pagination (50 per page)
+- [x] Retention policy: keep last 1000 records (auto-cleanup daily)
+- [ ] Export to CSV (not implemented)
 
 **Files to Create:**
 ```
 admin/
 └── audit-log.php
 ```
-
-**Testing:**
-- [ ] All actions logged correctly
-- [ ] Filter works
-- [ ] Export to CSV works
-- [ ] Retention policy deletes old logs
 
 ---
 
@@ -738,14 +621,6 @@ CREATE TABLE bearmor_vulnerabilities (
 );
 ```
 
-**Testing:**
-- [ ] API request successful
-- [ ] Vulnerabilities detected correctly
-- [ ] Cache works (24h)
-- [ ] Update/disable actions work
-- [ ] Whitelist prevents repeated alerts
-- [ ] Email sent for critical vulns
-
 ---
 
 ### 2B — Auto-Disable Vulnerable Plugins (Opt-In) ⬜
@@ -793,13 +668,6 @@ CREATE TABLE bearmor_plugin_snapshots (
   INDEX plugin_slug (plugin_slug)
 );
 ```
-
-**Testing:**
-- [ ] Snapshot created before disable
-- [ ] Plugin disabled successfully
-- [ ] Notification sent
-- [ ] Restore works (plugin + settings)
-- [ ] Auto-restore on update works
 
 ---
 
@@ -862,15 +730,6 @@ CREATE TABLE bearmor_firewall_whitelist (
 );
 ```
 
-**Testing:**
-- [ ] SQLi request blocked
-- [ ] XSS request blocked
-- [ ] Path traversal blocked
-- [ ] Whitelist IP bypasses firewall
-- [ ] Country blocking works (Paid)
-- [ ] User-agent blocking works (Paid)
-- [ ] Logs display correctly
-
 ---
 
 ### 2D — Deeper Scans (DB + Uploads) ⬜
@@ -918,14 +777,6 @@ CREATE TABLE bearmor_db_detections (
   INDEX detected_at (detected_at)
 );
 ```
-
-**Testing:**
-- [ ] DB scan detects injected scripts
-- [ ] Uploads scan detects PHP files
-- [ ] Polyglot file detected
-- [ ] Mark safe works
-- [ ] Remove from DB works
-- [ ] Batch processing handles large sites
 
 ---
 
@@ -979,14 +830,6 @@ CREATE TABLE bearmor_ai_analysis (
 );
 ```
 
-**Testing:**
-- [ ] Log summary generated correctly
-- [ ] OpenAI API request successful
-- [ ] AI response parsed and displayed
-- [ ] False positive learning works
-- [ ] Fail-safe handles API unavailability
-- [ ] Dashboard widget displays snippet
-
 ---
 
 ### 2F — PDF Reports ⬜
@@ -1038,13 +881,6 @@ CREATE TABLE bearmor_reports (
 );
 ```
 
-**Testing:**
-- [ ] PDF generated successfully
-- [ ] All sections populated correctly
-- [ ] Download works
-- [ ] Scheduled report sent via email
-- [ ] Report history displays correctly
-
 ---
 
 ### 2G — Uptime Monitoring ⬜
@@ -1088,14 +924,6 @@ bearmor-server/
     └── uptime-api.php (return data to plugin)
 ```
 
-**Testing:**
-- [ ] Server pings site successfully
-- [ ] Downtime detected correctly
-- [ ] Plugin receives uptime data
-- [ ] Dashboard widget displays correctly
-- [ ] Uptime page shows history
-- [ ] Email sent on downtime
-
 ---
 
 ### 2H — Performance & Safety Enhancements ⬜
@@ -1127,13 +955,6 @@ includes/
 ├── class-bearmor-batch-processor.php (extend from 2D)
 └── class-bearmor-performance.php
 ```
-
-**Testing:**
-- [ ] Batch processing works on large site
-- [ ] Pause/resume works
-- [ ] File exclusion works
-- [ ] Safe-mode operations work
-- [ ] Performance acceptable on large sites
 
 ---
 
@@ -1177,12 +998,6 @@ bearmor-server/
     └── verify.php
 ```
 
-**Testing:**
-- [ ] Site ID generated on activation
-- [ ] Registration request successful
-- [ ] License page displays correctly
-- [ ] Trial request works
-
 ---
 
 ### 3B — Call-Home Daily ⬜
@@ -1216,13 +1031,6 @@ includes/
 ├── class-bearmor-callhome.php (extend from 3A)
 └── class-bearmor-signature-verify.php
 ```
-
-**Testing:**
-- [ ] Daily call-home successful
-- [ ] Signature verified correctly
-- [ ] Cache stored for 24h
-- [ ] Pro features unlocked when `pro_enabled = true`
-- [ ] Manual verify works
 
 ---
 
@@ -1266,15 +1074,6 @@ includes/
 admin/
 └── safety-settings.php
 ```
-
-**Testing:**
-- [ ] Default behavior is passive
-- [ ] Auto-actions only work when enabled
-- [ ] Restore works for all actions
-- [ ] Fail-safe handles API unavailability
-- [ ] Grace period works correctly
-- [ ] Day 3–4: notice appears
-- [ ] Day 7+: Pro features disabled, Free works
 
 ---
 
