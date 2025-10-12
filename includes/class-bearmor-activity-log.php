@@ -157,7 +157,15 @@ class Bearmor_Activity_Log {
 
 	public static function log_plugin_deactivated( $plugin, $network_wide ) {
 		$plugin_data = get_plugin_data( WP_PLUGIN_DIR . '/' . $plugin );
-		self::log( 'plugin_deactivated', 'plugin', $plugin_data['Name'] );
+		
+		// Check if this is an auto-disable due to critical vulnerability
+		$transient_key = 'bearmor_auto_disabling_' . md5( $plugin );
+		if ( get_transient( $transient_key ) ) {
+			delete_transient( $transient_key );
+			self::log( 'plugin_auto_disabled', 'plugin', $plugin_data['Name'], 0 ); // System action
+		} else {
+			self::log( 'plugin_deactivated', 'plugin', $plugin_data['Name'] );
+		}
 	}
 
 	public static function log_plugin_installed( $upgrader, $options ) {
@@ -282,21 +290,22 @@ class Bearmor_Activity_Log {
 	 */
 	public static function get_action_label( $action ) {
 		$labels = array(
-			'login'              => '🔓 Logged In',
-			'logout'             => '🔒 Logged Out',
-			'plugin_installed'   => '📦 Installed Plugin',
-			'plugin_activated'   => '✅ Activated Plugin',
-			'plugin_deactivated' => '⏸️ Deactivated Plugin',
-			'plugin_deleted'     => '🗑️ Deleted Plugin',
-			'theme_switched'     => '🎨 Switched Theme',
-			'user_created'       => '👤 Created User',
-			'user_deleted'       => '❌ Deleted User',
-			'file_quarantined'   => '🔒 Quarantined File',
-			'file_restored'      => '♻️ Restored File',
-			'ip_blocked'         => '🚫 Blocked IP',
-			'ip_unblocked'       => '✅ Unblocked IP',
-			'settings_changed'   => '⚙️ Changed Settings',
-			'hardening_applied'  => '🛡️ Applied Hardening',
+			'login'                => '🔓 Logged In',
+			'logout'               => '🔒 Logged Out',
+			'plugin_installed'     => '📦 Installed Plugin',
+			'plugin_activated'     => '✅ Activated Plugin',
+			'plugin_deactivated'   => '⏸️ Deactivated Plugin',
+			'plugin_auto_disabled' => '<span style="color: #d63638; font-weight: 600;">🚨 Auto-Disabled Plugin (Critical Vulnerability)</span>',
+			'plugin_deleted'       => '🗑️ Deleted Plugin',
+			'theme_switched'       => '🎨 Switched Theme',
+			'user_created'         => '👤 Created User',
+			'user_deleted'         => '❌ Deleted User',
+			'file_quarantined'     => '🔒 Quarantined File',
+			'file_restored'        => '♻️ Restored File',
+			'ip_blocked'           => '🚫 Blocked IP',
+			'ip_unblocked'         => '✅ Unblocked IP',
+			'settings_changed'     => '⚙️ Changed Settings',
+			'hardening_applied'    => '🛡️ Applied Hardening',
 		);
 		
 		return isset( $labels[ $action ] ) ? $labels[ $action ] : ucwords( str_replace( '_', ' ', $action ) );

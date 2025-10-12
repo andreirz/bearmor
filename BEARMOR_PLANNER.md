@@ -623,51 +623,32 @@ CREATE TABLE bearmor_vulnerabilities (
 
 ---
 
-### 2B — Auto-Disable Vulnerable Plugins (Opt-In) ⬜
-**Status:** Not Started  
+### 2B — Auto-Disable Vulnerable Plugins (Opt-In) ✅
+**Status:** COMPLETE (simplified approach)  
 **Priority:** Medium  
 **Dependencies:** 2A
 
 **Tasks:**
-- [ ] **Default: OFF** (admin must explicitly enable)
-- [ ] Before disabling:
-  - [ ] Create snapshot: copy plugin folder to backup location
-  - [ ] Export plugin settings from DB (if any)
-  - [ ] Store in `bearmor_plugin_snapshots` table
-- [ ] Disable plugin via `deactivate_plugins()`
-- [ ] Notify admin:
-  - [ ] Dashboard notification (critical)
-  - [ ] Email notification
-  - [ ] Include: plugin name, vulnerability, restore button
-- [ ] Admin UI: Disabled Plugins page
-  - [ ] List disabled plugins with: name, reason, disabled date, snapshot available
-  - [ ] Actions: [Restore], [Delete Snapshot], [Keep Disabled]
-- [ ] Auto-restore if plugin updated to fixed version
+- [x] **Default: OFF** (admin must explicitly enable in Settings)
+- [x] Auto-disable plugins with critical vulnerabilities only
+- [x] Disable plugin via `deactivate_plugins()`
+- [x] Log to activity log with special highlighting:
+  - [x] Red background and border
+  - [x] 🚨 Auto-Disabled Plugin (Critical Vulnerability) label
+  - [x] System user (user_id = 0)
+- [x] Email notification:
+  - [x] List all disabled plugins
+  - [x] Explain what happened and next steps
+  - [x] Link to vulnerabilities page
+- [-] Snapshot/backup: **SKIPPED** (plugin files remain intact on deactivation)
+- [-] Admin UI page: **SKIPPED** (use Activity Log + Plugins page instead)
+- [-] Auto-restore: **NOT IMPLEMENTED** (admin can manually reactivate after update)
 
-**Files to Create:**
-```
-includes/
-├── class-bearmor-auto-disable.php
-└── class-bearmor-plugin-snapshot.php
-admin/
-└── disabled-plugins.php
-```
-
-**Database Schema:**
-```sql
-CREATE TABLE bearmor_plugin_snapshots (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  plugin_slug VARCHAR(255) NOT NULL,
-  plugin_version VARCHAR(50) NOT NULL,
-  snapshot_path VARCHAR(500) NOT NULL,
-  settings_backup TEXT,
-  disabled_at DATETIME NOT NULL,
-  disabled_reason VARCHAR(255),
-  restored_at DATETIME,
-  status ENUM('disabled', 'restored', 'deleted') DEFAULT 'disabled',
-  INDEX plugin_slug (plugin_slug)
-);
-```
+**Implementation:**
+- Setting already exists in `admin/settings.php`
+- Auto-disable logic in `class-bearmor-vulnerability-scanner.php`
+- Activity log detection via transient flag
+- No new files needed (integrated into existing code)
 
 ---
 

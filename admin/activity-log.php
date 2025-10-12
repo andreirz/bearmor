@@ -127,7 +127,8 @@ wp_enqueue_style( 'bearmor-dashboard', plugins_url( 'assets/css/dashboard.css', 
 					</tr>
 				<?php else : ?>
 					<?php foreach ( $logs as $log ) : ?>
-						<tr>
+						<?php $is_critical = ( $log->action === 'plugin_auto_disabled' ); ?>
+						<tr<?php echo $is_critical ? ' style="background: #fff5f5; border-left: 3px solid #d63638;"' : ''; ?>>
 							<td>
 								<strong><?php echo esc_html( date( 'Y-m-d', strtotime( $log->created_at ) ) ); ?></strong><br>
 								<small style="color: #666;"><?php echo esc_html( date( 'H:i:s', strtotime( $log->created_at ) ) ); ?></small>
@@ -139,7 +140,7 @@ wp_enqueue_style( 'bearmor-dashboard', plugins_url( 'assets/css/dashboard.css', 
 								<?php endif; ?>
 							</td>
 							<td>
-								<?php echo esc_html( Bearmor_Activity_Log::get_action_label( $log->action ) ); ?>
+								<?php echo Bearmor_Activity_Log::get_action_label( $log->action ); ?>
 							</td>
 							<td>
 								<?php if ( $log->object_type && $log->object_name ) : ?>
