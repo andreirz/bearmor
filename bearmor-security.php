@@ -244,6 +244,24 @@ function bearmor_activate() {
 	) $charset_collate;";
 	dbDelta( $sql );
 
+	// Deep scan results table
+	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_deep_scan_results (
+		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+		scan_type ENUM('database', 'uploads') NOT NULL,
+		item_type VARCHAR(50) NOT NULL,
+		item_id VARCHAR(255) NOT NULL,
+		location TEXT NOT NULL,
+		pattern VARCHAR(255),
+		matched_code TEXT,
+		severity ENUM('low', 'medium', 'high', 'critical') NOT NULL,
+		status ENUM('pending', 'safe', 'removed') DEFAULT 'pending',
+		detected_at DATETIME NOT NULL,
+		KEY scan_type (scan_type),
+		KEY status (status),
+		KEY detected_at (detected_at)
+	) $charset_collate;";
+	dbDelta( $sql );
+
 	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_firewall_whitelist (
 		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 		whitelist_type ENUM('ip', 'uri') NOT NULL,
@@ -299,6 +317,8 @@ require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-wpvulnerability-api.ph
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-vulnerability-scanner.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-firewall.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-honeypot.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-db-scanner.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-uploads-scanner.php';
 
 /**
  * Initialize security features
@@ -611,6 +631,15 @@ function bearmor_admin_menu() {
 
 	add_submenu_page(
 		'bearmor-security',
+		'Deep Scan',
+		'Deep Scan',
+		'manage_options',
+		'bearmor-deep-scan',
+		'bearmor_deep_scan_page'
+	);
+
+	add_submenu_page(
+		'bearmor-security',
 		'Vulnerabilities',
 		'Vulnerabilities',
 		'manage_options',
@@ -707,6 +736,17 @@ function bearmor_activity_log_page() {
 }
 
 /**
+ * Deep Scan page
+ */
+function bearmor_deep_scan_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( 'Access denied' );
+	}
+	
+	require_once BEARMOR_PLUGIN_DIR . 'admin/deep-scan.php';
+}
+
+/**
  * Vulnerabilities page
  */
 function bearmor_vulnerabilities_page() {
@@ -726,4 +766,442 @@ function bearmor_settings_page() {
 	}
 	
 	require_once BEARMOR_PLUGIN_DIR . 'admin/settings.php';
+}
+
+/**
+ * Ajax handler for database scan
+ */
+add_action( 'wp_ajax_bearmor_scan_database', 'bearmor_ajax_scan_database' );
+function bearmor_ajax_scan_database() {
+	check_ajax_referer( 'bearmor_deep_scan', 'nonce' );
+	
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => 'Access denied' ) );
+	}
+
+	global $wpdb;
+	$offset = isset( $_POST['offset'] ) ? intval( $_POST['offset'] ) : 0;
+	$batch_size = 50;
+
+	// Clear old results on first request
+	if ( $offset === 0 ) {
+		$wpdb->query( "DELETE FROM {$wpdb->prefix}bearmor_deep_scan_results WHERE scan_type = 'database'" );
+	}
+
+	// Get counts for progress
+	$counts = Bearmor_DB_Scanner::get_counts();
+	$total = $counts['posts'] + $counts['comments'] + $counts['options'];
+
+	// Scan posts
+	if ( $offset < $counts['posts'] ) {
+		$results = Bearmor_DB_Scanner::scan_batch( $batch_size, $offset );
+		
+		// Save results to database and add DB ID to results
+		foreach ( $results as $key => $result ) {
+			$wpdb->insert(
+				$wpdb->prefix . 'bearmor_deep_scan_results',
+				array(
+					'scan_type'    => 'database',
+					'item_type'    => $result['type'],
+					'item_id'      => $result['id'],
+					'location'     => $result['location'],
+					'pattern'      => $result['pattern'],
+					'matched_code' => $result['matched'],
+					'severity'     => $result['severity'],
+					'detected_at'  => current_time( 'mysql' ),
+				)
+			);
+			// Add the database ID to the result for frontend
+			$results[ $key ]['db_id'] = $wpdb->insert_id;
+		}
+		
+		$next_offset = $offset + $batch_size;
+		$progress = min( 100, round( ( $next_offset / $total ) * 100 ) );
+		$status = "Scanning posts... ({$next_offset} / {$counts['posts']})";
+		$complete = false;
+	}
+	// Scan comments
+	elseif ( $offset < $counts['posts'] + $counts['comments'] ) {
+		$comment_offset = $offset - $counts['posts'];
+		$results = Bearmor_DB_Scanner::scan_comments_batch( $batch_size, $comment_offset );
+		
+		// Save results to database and add DB ID to results
+		foreach ( $results as $key => $result ) {
+			$wpdb->insert(
+				$wpdb->prefix . 'bearmor_deep_scan_results',
+				array(
+					'scan_type'    => 'database',
+					'item_type'    => $result['type'],
+					'item_id'      => $result['id'],
+					'location'     => $result['location'],
+					'pattern'      => $result['pattern'],
+					'matched_code' => $result['matched'],
+					'severity'     => $result['severity'],
+					'detected_at'  => current_time( 'mysql' ),
+				)
+			);
+			$results[ $key ]['db_id'] = $wpdb->insert_id;
+		}
+		
+		$next_offset = $offset + $batch_size;
+		$progress = min( 100, round( ( $next_offset / $total ) * 100 ) );
+		$status = "Scanning comments... (" . ( $comment_offset + $batch_size ) . " / {$counts['comments']})";
+		$complete = false;
+	}
+	// Scan options
+	elseif ( $offset < $total ) {
+		$option_offset = $offset - $counts['posts'] - $counts['comments'];
+		$results = Bearmor_DB_Scanner::scan_options_batch( $batch_size, $option_offset );
+		
+		// Save results to database and add DB ID to results
+		foreach ( $results as $key => $result ) {
+			$wpdb->insert(
+				$wpdb->prefix . 'bearmor_deep_scan_results',
+				array(
+					'scan_type'    => 'database',
+					'item_type'    => $result['type'],
+					'item_id'      => $result['id'],
+					'location'     => $result['location'],
+					'pattern'      => $result['pattern'],
+					'matched_code' => $result['matched'],
+					'severity'     => $result['severity'],
+					'detected_at'  => current_time( 'mysql' ),
+				)
+			);
+			$results[ $key ]['db_id'] = $wpdb->insert_id;
+		}
+		
+		$next_offset = $offset + $batch_size;
+		$progress = min( 100, round( ( $next_offset / $total ) * 100 ) );
+		$status = "Scanning options... (" . ( $option_offset + $batch_size ) . " / {$counts['options']})";
+		$complete = $next_offset >= $total;
+	}
+	else {
+		$results = array();
+		$next_offset = $offset;
+		$progress = 100;
+		$status = "Scan complete!";
+		$complete = true;
+	}
+
+	wp_send_json_success( array(
+		'results'     => $results,
+		'next_offset' => $next_offset,
+		'progress'    => $progress,
+		'status'      => $status,
+		'complete'    => $complete,
+	) );
+}
+
+/**
+ * Ajax handler for uploads scan
+ */
+add_action( 'wp_ajax_bearmor_scan_uploads', 'bearmor_ajax_scan_uploads' );
+function bearmor_ajax_scan_uploads() {
+	check_ajax_referer( 'bearmor_deep_scan', 'nonce' );
+	
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => 'Access denied' ) );
+	}
+
+	global $wpdb;
+	$offset = isset( $_POST['offset'] ) ? intval( $_POST['offset'] ) : 0;
+	$batch_size = 50;
+
+	// Clear cache and old results on first request
+	if ( $offset === 0 ) {
+		delete_transient( 'bearmor_uploads_file_count' );
+		$wpdb->query( "DELETE FROM {$wpdb->prefix}bearmor_deep_scan_results WHERE scan_type = 'uploads'" );
+	}
+
+	// Get total file count (cached for performance)
+	$total = get_transient( 'bearmor_uploads_file_count' );
+	if ( false === $total ) {
+		$total = Bearmor_Uploads_Scanner::get_file_count();
+		set_transient( 'bearmor_uploads_file_count', $total, HOUR_IN_SECONDS );
+	}
+
+	// Handle empty uploads folder
+	if ( $total == 0 ) {
+		wp_send_json_success( array(
+			'results'     => array(),
+			'next_offset' => 0,
+			'progress'    => 100,
+			'status'      => 'No files in uploads folder',
+			'complete'    => true,
+		) );
+	}
+
+	// Scan batch
+	$results = Bearmor_Uploads_Scanner::scan_batch( $batch_size, $offset );
+	
+	// Save results to database
+	foreach ( $results as $result ) {
+		$wpdb->insert(
+			$wpdb->prefix . 'bearmor_deep_scan_results',
+			array(
+				'scan_type'    => 'uploads',
+				'item_type'    => $result['type'],
+				'item_id'      => $result['file'],
+				'location'     => $result['location'],
+				'pattern'      => $result['pattern'],
+				'matched_code' => $result['matched'],
+				'severity'     => $result['severity'],
+				'detected_at'  => current_time( 'mysql' ),
+			)
+		);
+	}
+	
+	$next_offset = $offset + $batch_size;
+	$progress = min( 100, round( ( $next_offset / $total ) * 100 ) );
+	$status = "Scanning files... ({$next_offset} / {$total})";
+	$complete = $next_offset >= $total;
+
+	wp_send_json_success( array(
+		'results'     => $results,
+		'next_offset' => $next_offset,
+		'progress'    => $progress,
+		'status'      => $status,
+		'complete'    => $complete,
+	) );
+}
+
+/**
+ * Ajax handler for viewing threat details
+ */
+add_action( 'wp_ajax_bearmor_view_threat', 'bearmor_ajax_view_threat' );
+function bearmor_ajax_view_threat() {
+	check_ajax_referer( 'bearmor_deep_scan', 'nonce' );
+	
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => 'Access denied' ) );
+	}
+
+	global $wpdb;
+	$id = isset( $_POST['id'] ) ? intval( $_POST['id'] ) : 0;
+	
+	$result = $wpdb->get_row(
+		$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}bearmor_deep_scan_results WHERE id = %d", $id ),
+		ARRAY_A
+	);
+
+	if ( ! $result ) {
+		wp_send_json_error( array( 'message' => 'Threat not found' ) );
+	}
+
+	$html = '<table class="widefat">';
+	$html .= '<tr><th>Location:</th><td>' . esc_html( $result['location'] ) . '</td></tr>';
+	$html .= '<tr><th>Pattern:</th><td><code>' . esc_html( $result['pattern'] ) . '</code></td></tr>';
+	$html .= '<tr><th>Severity:</th><td><strong>' . strtoupper( $result['severity'] ) . '</strong></td></tr>';
+	$html .= '<tr><th>Full Matched Code:</th><td><pre style="background: #f5f5f5; padding: 10px; overflow-x: auto;">' . esc_html( $result['matched_code'] ) . '</pre></td></tr>';
+	$html .= '<tr><th>Detected:</th><td>' . esc_html( $result['detected_at'] ) . '</td></tr>';
+	$html .= '</table>';
+
+	wp_send_json_success( array( 'html' => $html ) );
+}
+
+/**
+ * Ajax handler for marking threat as safe
+ */
+add_action( 'wp_ajax_bearmor_mark_safe', 'bearmor_ajax_mark_safe' );
+function bearmor_ajax_mark_safe() {
+	check_ajax_referer( 'bearmor_deep_scan', 'nonce' );
+	
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => 'Access denied' ) );
+	}
+
+	global $wpdb;
+	$id = isset( $_POST['id'] ) ? intval( $_POST['id'] ) : 0;
+	
+	$updated = $wpdb->update(
+		$wpdb->prefix . 'bearmor_deep_scan_results',
+		array( 'status' => 'safe' ),
+		array( 'id' => $id ),
+		array( '%s' ),
+		array( '%d' )
+	);
+
+	if ( $updated !== false ) {
+		wp_send_json_success( array( 'message' => 'Marked as safe' ) );
+	} else {
+		wp_send_json_error( array( 'message' => 'Failed to update' ) );
+	}
+}
+
+/**
+ * Ajax handler for cleaning threat (removing malicious code)
+ */
+add_action( 'wp_ajax_bearmor_clean_threat', 'bearmor_ajax_clean_threat' );
+function bearmor_ajax_clean_threat() {
+	check_ajax_referer( 'bearmor_deep_scan', 'nonce' );
+	
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => 'Access denied' ) );
+	}
+
+	global $wpdb;
+	$id = isset( $_POST['id'] ) ? intval( $_POST['id'] ) : 0;
+	$item_id = isset( $_POST['item_id'] ) ? intval( $_POST['item_id'] ) : 0;
+	$item_type = isset( $_POST['item_type'] ) ? sanitize_text_field( $_POST['item_type'] ) : '';
+
+	// Get the threat details
+	$threat = $wpdb->get_row(
+		$wpdb->prepare( "SELECT * FROM {$wpdb->prefix}bearmor_deep_scan_results WHERE id = %d", $id ),
+		ARRAY_A
+	);
+
+	if ( ! $threat ) {
+		wp_send_json_error( array( 'message' => 'Threat not found' ) );
+	}
+
+	$success = false;
+
+	// Remove malicious code based on type
+	if ( $item_type === 'post_content' ) {
+		// Get post content
+		$post = get_post( $item_id );
+		if ( $post ) {
+			// SAFELY remove only the exact malicious code (not entire blocks)
+			// First, try to find the exact match
+			if ( strpos( $post->post_content, $threat['matched_code'] ) !== false ) {
+				$cleaned_content = str_replace( $threat['matched_code'], '<!-- Malicious code removed by Bearmor Security -->', $post->post_content );
+				$success = wp_update_post( array(
+					'ID' => $item_id,
+					'post_content' => $cleaned_content,
+				), true ); // Return WP_Error on failure
+				
+				// Check if update failed
+				if ( is_wp_error( $success ) ) {
+					wp_send_json_error( array( 'message' => 'Failed to update post: ' . $success->get_error_message() ) );
+				}
+			} else {
+				wp_send_json_error( array( 'message' => 'Malicious code not found in post (may have been already removed)' ) );
+			}
+		}
+	} elseif ( $item_type === 'comment_content' ) {
+		// Get comment
+		$comment = get_comment( $item_id );
+		if ( $comment ) {
+			// Remove the malicious code
+			if ( strpos( $comment->comment_content, $threat['matched_code'] ) !== false ) {
+				$cleaned_content = str_replace( $threat['matched_code'], '[Removed by Bearmor Security]', $comment->comment_content );
+				$success = wp_update_comment( array(
+					'comment_ID' => $item_id,
+					'comment_content' => $cleaned_content,
+				) );
+			} else {
+				wp_send_json_error( array( 'message' => 'Malicious code not found in comment' ) );
+			}
+		}
+	} elseif ( $item_type === 'option_value' ) {
+		// Get option name from location
+		preg_match( '/Option: (.+)/', $threat['location'], $matches );
+		$option_name = isset( $matches[1] ) ? $matches[1] : '';
+		
+		if ( $option_name ) {
+			$option_value = get_option( $option_name );
+			if ( $option_value && strpos( $option_value, $threat['matched_code'] ) !== false ) {
+				// Remove the malicious code
+				$cleaned_value = str_replace( $threat['matched_code'], '', $option_value );
+				$success = update_option( $option_name, $cleaned_value );
+			} else {
+				wp_send_json_error( array( 'message' => 'Malicious code not found in option' ) );
+			}
+		}
+	}
+
+	if ( $success ) {
+		// Mark as removed in database
+		$wpdb->update(
+			$wpdb->prefix . 'bearmor_deep_scan_results',
+			array( 'status' => 'removed' ),
+			array( 'id' => $id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+		wp_send_json_success( array( 'message' => 'Malicious code removed' ) );
+	} else {
+		wp_send_json_error( array( 'message' => 'Failed to clean threat' ) );
+	}
+}
+
+/**
+ * Ajax handler for quarantining file
+ */
+add_action( 'wp_ajax_bearmor_quarantine_file', 'bearmor_ajax_quarantine_file' );
+function bearmor_ajax_quarantine_file() {
+	check_ajax_referer( 'bearmor_deep_scan', 'nonce' );
+	
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => 'Access denied' ) );
+	}
+
+	global $wpdb;
+	$id = isset( $_POST['id'] ) ? intval( $_POST['id'] ) : 0;
+	$file = isset( $_POST['file'] ) ? sanitize_text_field( $_POST['file'] ) : '';
+
+	if ( ! file_exists( $file ) ) {
+		wp_send_json_error( array( 'message' => 'File not found' ) );
+	}
+
+	$success = Bearmor_Uploads_Scanner::quarantine_file( $file );
+
+	if ( $success ) {
+		$wpdb->update(
+			$wpdb->prefix . 'bearmor_deep_scan_results',
+			array( 'status' => 'removed' ),
+			array( 'id' => $id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+		wp_send_json_success( array( 'message' => 'File quarantined' ) );
+	} else {
+		wp_send_json_error( array( 'message' => 'Failed to quarantine file' ) );
+	}
+}
+
+/**
+ * Ajax handler for deleting file
+ */
+add_action( 'wp_ajax_bearmor_delete_file', 'bearmor_ajax_delete_file' );
+function bearmor_ajax_delete_file() {
+	check_ajax_referer( 'bearmor_deep_scan', 'nonce' );
+	
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => 'Access denied' ) );
+	}
+
+	global $wpdb;
+	$id = isset( $_POST['id'] ) ? intval( $_POST['id'] ) : 0;
+	$file = isset( $_POST['file'] ) ? sanitize_text_field( $_POST['file'] ) : '';
+
+	if ( empty( $file ) ) {
+		wp_send_json_error( array( 'message' => 'No file specified' ) );
+	}
+
+	if ( ! file_exists( $file ) ) {
+		wp_send_json_error( array( 'message' => 'File not found: ' . $file ) );
+	}
+
+	// Security check - ensure file is in uploads directory
+	$uploads_dir = wp_upload_dir();
+	if ( strpos( realpath( $file ), realpath( $uploads_dir['basedir'] ) ) !== 0 ) {
+		wp_send_json_error( array( 'message' => 'Security: File must be in uploads directory' ) );
+	}
+
+	$success = Bearmor_Uploads_Scanner::delete_file( $file );
+
+	if ( $success ) {
+		$wpdb->update(
+			$wpdb->prefix . 'bearmor_deep_scan_results',
+			array( 'status' => 'removed' ),
+			array( 'id' => $id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+		wp_send_json_success( array( 'message' => 'File deleted successfully' ) );
+	} else {
+		wp_send_json_error( array( 'message' => 'Failed to delete file. Check file permissions.' ) );
+	}
 }

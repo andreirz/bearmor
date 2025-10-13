@@ -734,30 +734,43 @@ CREATE TABLE bearmor_firewall_whitelist (
 **Dependencies:** 1D, 3A
 
 **Tasks:**
-- [ ] **Database scan:**
-  - [ ] Scan `wp_posts` (post_content, post_excerpt) for suspicious scripts
-  - [ ] Scan `wp_options` (option_value) for injected code
-  - [ ] Scan `wp_comments` (comment_content) for malicious links
-  - [ ] Detect: `<script>`, `<iframe>`, obfuscated JS, known malware URLs
-- [ ] **Uploads scan:**
-  - [ ] Scan `wp-content/uploads/` for PHP files (shouldn't be there)
-  - [ ] Scan image files for embedded PHP code (polyglot files)
-  - [ ] Detect suspicious file extensions: `.php.jpg`, `.phtml`, etc.
-- [ ] Admin UI: Deep Scan Results page
-  - [ ] Tabs: Database | Uploads
-  - [ ] List suspicious items with: location, matched pattern, severity
-  - [ ] Actions: [View], [Mark Safe], [Remove], [Quarantine]
-- [ ] Performance: batch processing for large sites
+- [x] **Database scan:**
+  - [x] Scan `wp_posts` (post_content, post_excerpt) for suspicious scripts
+  - [x] Scan `wp_options` (option_value) for injected code
+  - [x] Scan `wp_comments` (comment_content) for malicious links
+  - [x] Detect: `<script>`, `<iframe>`, obfuscated JS, known malware URLs
+  - [x] Exclude revisions, auto-drafts, and nav items
+  - [x] Find ALL threats per post (not just first one)
+  - [x] Avoid duplicate detections
+- [x] **Uploads scan:**
+  - [x] Scan `wp-content/uploads/` for PHP files (shouldn't be there)
+  - [x] Scan image files for embedded PHP code (polyglot files)
+  - [x] Detect suspicious file extensions: `.php.jpg`, `.phtml`, etc.
+  - [x] Detect suspicious filenames (shell, backdoor, etc.)
+- [x] Admin UI: Deep Scan Results page
+  - [x] Tabs: Database | Uploads
+  - [x] List suspicious items with: location, matched pattern, severity
+  - [x] Actions: [View], [Clean], [Quarantine], [Delete]
+  - [x] Persistent storage - results survive page refresh
+  - [x] View button shows full threat details in modal
+  - [x] Clean button safely removes only malicious code
+  - [x] Quarantine button moves files to safe location
+  - [x] Delete button permanently removes files
+- [x] Performance: batch processing for large sites
+  - [x] AJAX-based scanning with progress bar
+  - [x] Handles large databases without timeout
 
-**Files to Create:**
+**Files Created:**
 ```
 includes/
-├── class-bearmor-db-scanner.php
-├── class-bearmor-uploads-scanner.php
-└── class-bearmor-batch-processor.php
+├── class-bearmor-db-scanner.php ✅
+├── class-bearmor-uploads-scanner.php ✅
 admin/
-└── deep-scan.php
+└── deep-scan.php ✅
 ```
+
+**Database Table:**
+- `wp_bearmor_deep_scan_results` - Stores all scan results ✅
 
 **Database Schema:**
 ```sql
