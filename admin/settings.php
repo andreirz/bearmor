@@ -17,6 +17,12 @@ if ( isset( $_POST['bearmor_save_settings'] ) && check_admin_referer( 'bearmor_s
 	$settings['notification_email'] = sanitize_email( $_POST['notification_email'] );
 	$settings['auto_quarantine'] = isset( $_POST['auto_quarantine'] ) ? true : false;
 	$settings['auto_disable_vulnerable'] = isset( $_POST['auto_disable_vulnerable'] ) ? true : false;
+	$settings['firewall_enabled'] = isset( $_POST['firewall_enabled'] ) ? true : false;
+	$settings['firewall_rate_limiting'] = isset( $_POST['firewall_rate_limiting'] ) ? true : false;
+	$settings['firewall_rate_limit'] = isset( $_POST['firewall_rate_limit'] ) ? intval( $_POST['firewall_rate_limit'] ) : 100;
+	$settings['firewall_country_blocking'] = isset( $_POST['firewall_country_blocking'] ) ? true : false;
+	$settings['firewall_blocked_countries'] = sanitize_text_field( $_POST['firewall_blocked_countries'] );
+	$settings['firewall_honeypot'] = isset( $_POST['firewall_honeypot'] ) ? true : false;
 	update_option( 'bearmor_settings', $settings );
 	
 	// Save 2FA settings
@@ -90,6 +96,60 @@ $settings = get_option( 'bearmor_settings', array() );
 						<input type="checkbox" name="auto_disable_vulnerable" value="1" <?php checked( ! empty( $settings['auto_disable_vulnerable'] ) ); ?>>
 						Automatically disable plugins with critical vulnerabilities (Pro feature)
 					</label>
+				</td>
+			</tr>
+			<tr>
+				<th>Web Application Firewall</th>
+				<td>
+					<label>
+						<input type="checkbox" name="firewall_enabled" value="1" <?php checked( ! empty( $settings['firewall_enabled'] ) ); ?>>
+						Enable firewall to block SQL injection, XSS, and other attacks
+					</label>
+					<p class="description">Protects your site from common web attacks. Enabled by default.</p>
+				</td>
+			</tr>
+		</table>
+
+		<h2>🔥 Advanced Firewall (Pro Features)</h2>
+		<p class="description" style="background: #fff3cd; padding: 10px; border-left: 3px solid #ffc107; margin-bottom: 15px;">
+			⭐ <strong>Pro Features:</strong> These advanced firewall features are available for testing. In production, they will require a Pro license.
+		</p>
+		<table class="form-table">
+			<tr>
+				<th>Rate Limiting</th>
+				<td>
+					<label>
+						<input type="checkbox" name="firewall_rate_limiting" value="1" <?php checked( ! empty( $settings['firewall_rate_limiting'] ) ); ?>>
+						Block IPs exceeding request limit
+					</label>
+					<p class="description">
+						Limit: <input type="number" name="firewall_rate_limit" value="<?php echo esc_attr( isset( $settings['firewall_rate_limit'] ) ? $settings['firewall_rate_limit'] : 100 ); ?>" min="10" max="1000" style="width: 80px;"> requests per minute
+					</p>
+					<p class="description">Prevents DDoS attacks and aggressive bots. Recommended: 100 req/min.</p>
+				</td>
+			</tr>
+			<tr>
+				<th>Country Blocking</th>
+				<td>
+					<label>
+						<input type="checkbox" name="firewall_country_blocking" value="1" <?php checked( ! empty( $settings['firewall_country_blocking'] ) ); ?>>
+						Block requests from specific countries
+					</label>
+					<p class="description">
+						Blocked countries (comma-separated codes): 
+						<input type="text" name="firewall_blocked_countries" value="<?php echo esc_attr( isset( $settings['firewall_blocked_countries'] ) ? $settings['firewall_blocked_countries'] : '' ); ?>" placeholder="e.g., CN, RU, KP" style="width: 300px;">
+					</p>
+					<p class="description">Use 2-letter country codes (e.g., US, GB, CN). <a href="https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2" target="_blank">See full list</a></p>
+				</td>
+			</tr>
+			<tr>
+				<th>Honeypot Protection</th>
+				<td>
+					<label>
+						<input type="checkbox" name="firewall_honeypot" value="1" <?php checked( ! empty( $settings['firewall_honeypot'] ) ); ?>>
+						Add invisible honeypot fields to forms
+					</label>
+					<p class="description">Catches spam bots on login and comment forms. Invisible to real users.</p>
 				</td>
 			</tr>
 		</table>

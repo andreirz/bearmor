@@ -652,41 +652,46 @@ CREATE TABLE bearmor_vulnerabilities (
 
 ---
 
-### 2C — Firewall Lite (Enhanced) ⬜
-**Status:** Not Started  
+### 2C — Firewall Lite (Enhanced) ✅
+**Status:** COMPLETE (basic firewall)  
 **Priority:** High  
 **Dependencies:** 1A, 3A (call-home for Pro features)
 
 **Tasks:**
-- [ ] **Free tier:** Basic SQLi/XSS blocking
-- [ ] **Paid tier:** Advanced rules
-  - [ ] Country blocking (GeoIP)
-  - [ ] Bad user-agent blocking (bots, scrapers)
-  - [ ] Honeypot fields for forms
-  - [ ] Rate limiting per IP (requests/min)
-- [ ] Hook into `init` (early execution)
-- [ ] Check request for malicious patterns:
-  - [ ] SQL injection: `UNION SELECT`, `' OR '1'='1`, etc.
-  - [ ] XSS: `<script>`, `javascript:`, `onerror=`, etc.
-  - [ ] Path traversal: `../`, `..\\`
-  - [ ] Command injection: `; rm -rf`, `| cat /etc/passwd`
-- [ ] Block request: return 403 Forbidden
-- [ ] Log blocked requests
-- [ ] Admin UI: Firewall page
-  - [ ] Toggle rules on/off
-  - [ ] Whitelist IPs/URIs
-  - [ ] View blocked requests log
-  - [ ] Country blocking settings (Paid)
-  - [ ] User-agent blacklist (Paid)
+- [x] **Free tier:** Basic SQLi/XSS blocking
+- [x] **Paid tier:** Advanced rules (IMPLEMENTED - open for testing)
+  - [ ] Country blocking (GeoIP) - uses ip-api.com, cached 24h
+  - [ ] Bad user-agent blocking (bots, scrapers) - NOT IMPLEMENTED
+  - [x] Honeypot fields for forms (login & comments)
+  - [x] Rate limiting per IP (requests/min) - uses transients
+- [x] Hook into `init` (early execution)
+- [x] Check request for malicious patterns:
+  - [x] SQL injection: `UNION SELECT`, `OR 1=1`, etc.
+  - [x] XSS: `<script>`, `javascript:`, `onerror=`, etc.
+  - [x] Path traversal: `../`, `..\\`, `/etc/passwd`
+  - [x] Command injection: `; rm -rf`, `| cat`, backticks
+- [x] Block request: return 403 Forbidden (generic message, no attack details)
+- [x] Log blocked requests to database (with full attack details)
+- [x] URL decoding for encoded attacks
+- [x] Admin UI: Integrated into Security Logs page
+  - [x] View blocked requests (side-by-side with Activity Log)
+  - [x] Show: time, IP, attack type, request URI
+  - [x] Stats: total blocks, last 24h count
+  - [x] Pagination for firewall blocks
+- [x] Settings: Enable/disable firewall toggle
+- [x] Settings: Advanced firewall features (rate limit, country blocking, honeypot)
+- [x] Whitelist support (IP & URI) - database ready
+- [x] Skip checks for admins (performance)
+- [x] Enabled by default
+- [x] Honeypot logs to Activity Log as "🍯 Blocked Login (Honeypot)"
 
-**Files to Create:**
+**Files Created:**
 ```
 includes/
-├── class-bearmor-firewall.php
-├── class-bearmor-firewall-rules.php
-└── class-bearmor-geolocation.php (extend from 1F)
+├── class-bearmor-firewall.php ✅
+└── class-bearmor-honeypot.php ✅
 admin/
-└── firewall.php
+└── activity-log.php (renamed to Security Logs, includes firewall) ✅
 ```
 
 **Database Schema:**
@@ -701,15 +706,25 @@ CREATE TABLE bearmor_firewall_blocks (
   blocked_at DATETIME NOT NULL,
   INDEX ip_address (ip_address),
   INDEX blocked_at (blocked_at)
-);
+); ✅ CREATED
 
 CREATE TABLE bearmor_firewall_whitelist (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   whitelist_type ENUM('ip', 'uri') NOT NULL,
   value VARCHAR(500) NOT NULL,
   added_at DATETIME NOT NULL
-);
+); ✅ CREATED
 ```
+
+**Notes:**
+- Activity Log renamed to "Security Logs"
+- Two-column layout: Activity Log (left) + Firewall Blocks (right)
+- Compact design with smaller fonts for side-by-side view
+- Security best practice: Generic errors to attackers, detailed logs for admins
+- Rate limiting tested locally ✅
+- Honeypot tested locally ✅
+- Country blocking needs online testing (local IPs skipped)
+- Bot/scraper detection deferred to future
 
 ---
 

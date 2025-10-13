@@ -41,6 +41,7 @@ function bearmor_activate() {
 			'auto_quarantine'         => false,
 			'auto_disable_vulnerable' => false,
 			'safe_mode'               => true,
+			'firewall_enabled'        => true, // Firewall ON by default
 			'first_activation'        => current_time( 'mysql' ),
 		);
 		add_option( 'bearmor_settings', $defaults );
@@ -229,6 +230,29 @@ function bearmor_activate() {
 	) $charset_collate;";
 	dbDelta( $sql );
 
+	// Firewall tables
+	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_firewall_blocks (
+		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+		ip_address VARCHAR(45) NOT NULL,
+		request_uri TEXT NOT NULL,
+		request_method VARCHAR(10),
+		user_agent TEXT,
+		rule_matched VARCHAR(255),
+		blocked_at DATETIME NOT NULL,
+		KEY idx_ip_address (ip_address),
+		KEY idx_blocked_at (blocked_at)
+	) $charset_collate;";
+	dbDelta( $sql );
+
+	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_firewall_whitelist (
+		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+		whitelist_type ENUM('ip', 'uri') NOT NULL,
+		value VARCHAR(500) NOT NULL,
+		added_at DATETIME NOT NULL,
+		KEY idx_type (whitelist_type)
+	) $charset_collate;";
+	dbDelta( $sql );
+
 	// Create quarantine directory
 	$quarantine_dir = WP_CONTENT_DIR . '/bearmor-quarantine';
 	if ( ! file_exists( $quarantine_dir ) ) {
@@ -273,10 +297,14 @@ require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-2fa.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-activity-log.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-wpvulnerability-api.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-vulnerability-scanner.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-firewall.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-honeypot.php';
 
 /**
  * Initialize security features
  */
+Bearmor_Firewall::init();
+Bearmor_Honeypot::init();
 Bearmor_Login_Protection::init();
 Bearmor_Anomaly_Detector::init();
 Bearmor_Hardening::init();
@@ -574,8 +602,8 @@ function bearmor_admin_menu() {
 
 	add_submenu_page(
 		'bearmor-security',
-		'Activity Log',
-		'Activity Log',
+		'Security Logs',
+		'Security Logs',
 		'manage_options',
 		'bearmor-activity-log',
 		'bearmor_activity_log_page'
