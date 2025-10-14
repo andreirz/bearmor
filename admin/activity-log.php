@@ -90,7 +90,7 @@ wp_enqueue_style( 'bearmor-dashboard', plugins_url( 'assets/css/dashboard.css', 
 			<!-- Filters -->
 			<div style="background: #fff; border: 1px solid #ccc; padding: 10px; margin-bottom: 15px; border-radius: 5px;">
 				<form method="get" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-					<input type="hidden" name="page" value="bearmor-activity-log">
+					<input type="hidden" name="page" value="bearmor-security-logs">
 					
 					<select name="action_filter" style="min-width: 150px; font-size: 12px;">
 						<option value="">All Actions</option>
@@ -115,7 +115,7 @@ wp_enqueue_style( 'bearmor-dashboard', plugins_url( 'assets/css/dashboard.css', 
 			<button type="submit" class="button">Filter</button>
 			
 			<?php if ( $action_filter || $user_filter || $search ) : ?>
-				<a href="<?php echo admin_url( 'admin.php?page=bearmor-activity-log' ); ?>" class="button">Clear Filters</a>
+				<a href="<?php echo admin_url( 'admin.php?page=bearmor-security-logs' ); ?>" class="button">Clear Filters</a>
 			<?php endif; ?>
 			
 			<div style="margin-left: auto; color: #666; font-size: 13px;">
@@ -187,7 +187,7 @@ wp_enqueue_style( 'bearmor-dashboard', plugins_url( 'assets/css/dashboard.css', 
 		<div style="margin: 20px 0; text-align: center;">
 			<?php
 			$base_url = add_query_arg( array(
-				'page'          => 'bearmor-activity-log',
+				'page'          => 'bearmor-security-logs',
 				'action_filter' => $action_filter,
 				'user_filter'   => $user_filter,
 				's'             => $search,
@@ -272,7 +272,7 @@ wp_enqueue_style( 'bearmor-dashboard', plugins_url( 'assets/css/dashboard.css', 
 				<div style="margin: 15px 0; text-align: center; font-size: 12px;">
 					<?php
 					$firewall_base_url = add_query_arg( array(
-						'page' => 'bearmor-activity-log',
+						'page' => 'bearmor-security-logs',
 					), admin_url( 'admin.php' ) );
 					
 					echo paginate_links( array(

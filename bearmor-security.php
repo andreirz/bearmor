@@ -625,7 +625,7 @@ function bearmor_admin_menu() {
 		'Security Logs',
 		'Security Logs',
 		'manage_options',
-		'bearmor-activity-log',
+		'bearmor-security-logs',
 		'bearmor_activity_log_page'
 	);
 
