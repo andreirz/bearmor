@@ -821,7 +821,7 @@ CREATE TABLE bearmor_db_detections (
 - [x] Debug section: Show full prompt sent to AI
 - [x] Manual trigger: AJAX button for testing (before cron)
 - [ ] Redo the calls to call via our server. dont expose live key
-- [ ] Test on live server
+- [ ] Remove Refresh Analysis button 
 
 **Files to Create:**
 ```
@@ -847,30 +847,30 @@ CREATE TABLE bearmor_ai_analysis (
 
 ---
 
-### 2F — PDF Reports ⬜
-**Status:** Not Started  
+### 2F — PDF Reports ✅
+**Status:** Complete (HTML Reports)  
 **Priority:** Low  
 **Dependencies:** 2E
 
 **Tasks:**
-- [ ] Generate PDF report using library (TCPDF or mPDF)
-- [ ] Report contents:
-  - [ ] Cover page: site name, date range, Bearmor branding
-  - [ ] Executive summary: security score, key findings
-  - [ ] Uptime: percentage, downtime incidents
-  - [ ] Vulnerabilities: list with severity
-  - [ ] File changes: count, critical changes
-  - [ ] Malware detections: count, actions taken
-  - [ ] Login activity: anomalies, blocked IPs
-  - [ ] AI analysis: recommendations
-  - [ ] Actions taken: audit log summary
-- [ ] Admin UI: Reports page
-  - [ ] Date range selector (last 7/30/90 days, custom)
-  - [ ] [Generate PDF] button
-  - [ ] [Download] link after generation
-  - [ ] Report history: list previous reports
+- [x] Generate HTML report (viewable in browser, printable to PDF)
+- [x] Report contents:
+  - [x] Cover page: site name, date range, Bearmor branding
+  - [x] Executive summary: security score, key findings
+  - [x] Vulnerabilities: count with status
+  - [x] File changes: count with context
+  - [x] Malware detections: count with status
+  - [x] Login activity: anomalies detected
+  - [x] AI analysis: full recommendations
+  - [x] Firewall blocks: count (attacks blocked)
+- [x] Admin UI: Dashboard button
+  - [x] [Generate Report] button on dashboard
+  - [x] Opens in new tab
+  - [x] Professional styling with 2-column metrics grid
+  - [x] Color-coded severity indicators
 - [ ] Optional: scheduled reports (weekly/monthly via WP Cron)
-  - [ ] Email PDF as attachment
+  - [ ] Email HTML/PDF as attachment
+- [ ] Optional: actual PDF library integration (mPDF/TCPDF)
 
 **Files to Create:**
 ```

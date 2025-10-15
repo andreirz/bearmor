@@ -31,30 +31,83 @@ wp_enqueue_style( 'bearmor-dashboard', BEARMOR_PLUGIN_URL . 'assets/css/dashboar
 		<!-- Security Score -->
 		<?php require BEARMOR_PLUGIN_DIR . 'admin/partials/widget-security-score.php'; ?>
 
-		<!-- Quick Actions -->
+		<!-- Quick Actions - Two Columns -->
 		<div class="bearmor-quick-actions">
-			<div class="bearmor-actions-grid">
-				<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-settings' ) ); ?>" class="bearmor-action-card">
-					<span class="dashicons dashicons-admin-settings"></span>
-					<span>Settings</span>
-				</a>
-				<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-hardening' ) ); ?>" class="bearmor-action-card">
-					<span class="dashicons dashicons-shield-alt"></span>
-					<span>Apply Hardening</span>
-				</a>
-				<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-malware-alerts' ) ); ?>" class="bearmor-action-card">
-					<span class="dashicons dashicons-search"></span>
-					<span>Run Scan</span>
-				</a>
+			<!-- Left Column: Settings, Hardening, Scan -->
+			<div class="bearmor-actions-column">
+				<h4 style="margin: 0 0 12px 0; font-size: 13px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px;">Actions</h4>
+				<div class="bearmor-actions-grid">
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-settings' ) ); ?>" class="bearmor-action-card">
+						<span class="dashicons dashicons-admin-settings"></span>
+						<span>Settings</span>
+					</a>
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-hardening' ) ); ?>" class="bearmor-action-card">
+						<span class="dashicons dashicons-shield-alt"></span>
+						<span>Apply Hardening</span>
+					</a>
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-malware-alerts' ) ); ?>" class="bearmor-action-card">
+						<span class="dashicons dashicons-search"></span>
+						<span>Run Scan</span>
+					</a>
+				</div>
+			</div>
+			<!-- Right Column: Reports -->
+			<div class="bearmor-actions-column">
+				<h4 style="margin: 0 0 12px 0; font-size: 13px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px;">Reports</h4>
+				<div class="bearmor-actions-grid">
+					<a href="#" class="bearmor-action-card" onclick="bearmor_generate_pdf_report(); return false;">
+						<span class="dashicons dashicons-media-document"></span>
+						<span>Generate PDF Report</span>
+					</a>
+				</div>
 			</div>
 		</div>
-	</div>
+
+<script>
+function bearmor_generate_pdf_report() {
+	if ( !confirm( 'Generate PDF report for the last 7 days?' ) ) {
+		return;
+	}
+	
+	var button = event.target.closest( '.bearmor-action-card' );
+	var originalText = button.textContent;
+	button.textContent = 'Generating...';
+	button.style.pointerEvents = 'none';
+	button.style.opacity = '0.6';
+	
+	jQuery.post( ajaxurl, {
+		action: 'bearmor_generate_pdf_report',
+		days: 7
+	}, function( response ) {
+		console.log( 'PDF Generation Response:', response );
+		if ( response.success ) {
+			// Open in new tab
+			window.open( response.data.url, '_blank' );
+			button.textContent = originalText;
+			button.style.pointerEvents = 'auto';
+			button.style.opacity = '1';
+		} else {
+			alert( 'Error: ' + ( response.data ? response.data.message : 'Unknown error' ) );
+			button.textContent = originalText;
+			button.style.pointerEvents = 'auto';
+			button.style.opacity = '1';
+		}
+	}).fail( function( xhr, status, error ) {
+		console.error( 'AJAX Error:', error, xhr.responseText );
+		alert( 'Network error: ' + error );
+		button.textContent = originalText;
+		button.style.pointerEvents = 'auto';
+		button.style.opacity = '1';
+	});
+}
+</script>
+
+</div>
 
 	<!-- Widgets Grid -->
 	<div class="bearmor-widgets-grid">
 		<!-- Last Scan Widget -->
 		<?php
-		$last_malware_scan = get_option( 'bearmor_last_malware_scan' );
 		$scan_results = get_option( 'bearmor_malware_scan_results', array() );
 		
 		// Get threat counts by severity

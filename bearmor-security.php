@@ -346,6 +346,7 @@ require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-db-scanner.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-uploads-scanner.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-summary-builder.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-ai-analyzer.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-pdf-generator.php';
 
 /**
  * Initialize security features
@@ -1184,36 +1185,6 @@ function bearmor_ajax_quarantine_file() {
 		);
 		wp_send_json_success( array( 'message' => 'File quarantined' ) );
 	} else {
-		wp_send_json_error( array( 'message' => 'Failed to quarantine file' ) );
-	}
-}
-
-/**
- * Ajax handler for deleting file
- */
-add_action( 'wp_ajax_bearmor_delete_file', 'bearmor_ajax_delete_file' );
-function bearmor_ajax_delete_file() {
-	check_ajax_referer( 'bearmor_deep_scan', 'nonce' );
-	
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_send_json_error( array( 'message' => 'Access denied' ) );
-	}
-
-	global $wpdb;
-	$id = isset( $_POST['id'] ) ? intval( $_POST['id'] ) : 0;
-	$file = isset( $_POST['file'] ) ? sanitize_text_field( $_POST['file'] ) : '';
-
-	if ( empty( $file ) ) {
-		wp_send_json_error( array( 'message' => 'No file specified' ) );
-	}
-
-	if ( ! file_exists( $file ) ) {
-		wp_send_json_error( array( 'message' => 'File not found: ' . $file ) );
-	}
-
-	// Security check - ensure file is in uploads directory
-	$uploads_dir = wp_upload_dir();
-	if ( strpos( realpath( $file ), realpath( $uploads_dir['basedir'] ) ) !== 0 ) {
 		wp_send_json_error( array( 'message' => 'Security: File must be in uploads directory' ) );
 	}
 
@@ -1266,4 +1237,51 @@ function bearmor_ajax_trigger_ai_analysis() {
 		'color'   => $result['color'],
 		'tokens'  => $result['tokens_used']
 	) );
+}
+
+/**
+ * AJAX handler for PDF report generation
+ */
+add_action( 'wp_ajax_bearmor_generate_pdf_report', 'bearmor_ajax_generate_pdf_report' );
+function bearmor_ajax_generate_pdf_report() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => 'Access denied' ) );
+	}
+	
+	$days = isset( $_POST['days'] ) ? intval( $_POST['days'] ) : 7;
+	
+	error_log( 'BEARMOR PDF: Generating report for ' . $days . ' days' );
+	
+	$result = Bearmor_PDF_Generator::generate( $days );
+	
+	if ( is_wp_error( $result ) ) {
+		error_log( 'BEARMOR PDF Error: ' . $result->get_error_message() );
+		wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+	}
+	
+	error_log( 'BEARMOR PDF: Report generated at ' . $result );
+	
+	wp_send_json_success( array( 
+		'message' => 'Report generated successfully',
+		'file'    => basename( $result ),
+		'url'     => admin_url( 'admin-ajax.php?action=bearmor_download_pdf&file=' . basename( $result ) )
+	) );
+}
+
+/**
+ * AJAX handler for PDF report download
+ */
+add_action( 'wp_ajax_bearmor_download_pdf', 'bearmor_ajax_download_pdf' );
+function bearmor_ajax_download_pdf() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( 'Access denied' );
+	}
+	
+	$file = isset( $_GET['file'] ) ? sanitize_file_name( $_GET['file'] ) : '';
+	
+	if ( empty( $file ) ) {
+		wp_die( 'No file specified' );
+	}
+	
+	Bearmor_PDF_Generator::download( $file );
 }
