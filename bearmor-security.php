@@ -19,10 +19,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'BEARMOR_VERSION', '0.1.7' );
+define( 'BEARMOR_VERSION', '0.1.8' );
 define( 'BEARMOR_PLUGIN_FILE', __FILE__ );
 define( 'BEARMOR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BEARMOR_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+
 
 /**
  * Plugin activation
@@ -271,6 +272,30 @@ function bearmor_activate() {
 	) $charset_collate;";
 	dbDelta( $sql );
 
+	// AI Analyses table
+	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_ai_analyses (
+		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+		summary_data LONGTEXT NOT NULL,
+		ai_prompt LONGTEXT NOT NULL,
+		ai_response LONGTEXT NOT NULL,
+		color_rating ENUM('green', 'gray', 'yellow', 'red') DEFAULT 'gray',
+		model_used VARCHAR(50) NOT NULL,
+		tokens_used INT NOT NULL,
+		created_at DATETIME NOT NULL,
+		KEY idx_created_at (created_at),
+		KEY idx_color_rating (color_rating)
+	) $charset_collate;";
+	dbDelta( $sql );
+	
+	// Manually add ai_prompt column if it doesn't exist (dbDelta doesn't modify existing tables)
+	$table_name = $wpdb->prefix . 'bearmor_ai_analyses';
+	$columns = $wpdb->get_results( "SHOW COLUMNS FROM {$table_name}" );
+	$column_names = wp_list_pluck( $columns, 'Field' );
+	
+	if ( ! in_array( 'ai_prompt', $column_names ) ) {
+		$wpdb->query( "ALTER TABLE {$table_name} ADD COLUMN ai_prompt LONGTEXT NOT NULL AFTER summary_data" );
+	}
+
 	// Create quarantine directory
 	$quarantine_dir = WP_CONTENT_DIR . '/bearmor-quarantine';
 	if ( ! file_exists( $quarantine_dir ) ) {
@@ -319,6 +344,8 @@ require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-firewall.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-honeypot.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-db-scanner.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-uploads-scanner.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-summary-builder.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-ai-analyzer.php';
 
 /**
  * Initialize security features
@@ -1204,4 +1231,39 @@ function bearmor_ajax_delete_file() {
 	} else {
 		wp_send_json_error( array( 'message' => 'Failed to delete file. Check file permissions.' ) );
 	}
+}
+
+/**
+ * AJAX handler for manual AI analysis trigger
+ */
+add_action( 'wp_ajax_bearmor_trigger_ai_analysis', 'bearmor_ajax_trigger_ai_analysis' );
+function bearmor_ajax_trigger_ai_analysis() {
+	error_log( 'BEARMOR AJAX: bearmor_trigger_ai_analysis called' );
+	
+	check_ajax_referer( 'bearmor_ai_analysis', 'nonce' );
+	
+	if ( ! current_user_can( 'manage_options' ) ) {
+		error_log( 'BEARMOR AJAX: Access denied' );
+		wp_send_json_error( array( 'message' => 'Access denied' ) );
+	}
+	
+	error_log( 'BEARMOR AJAX: Starting analysis...' );
+	
+	// Run AI analysis
+	$result = Bearmor_AI_Analyzer::analyze( 7 );
+	
+	error_log( 'BEARMOR AJAX: Analysis result: ' . print_r( $result, true ) );
+	
+	if ( is_wp_error( $result ) ) {
+		error_log( 'BEARMOR AJAX: Error - ' . $result->get_error_message() );
+		wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+	}
+	
+	error_log( 'BEARMOR AJAX: Success - sending response' );
+	
+	wp_send_json_success( array( 
+		'message' => 'Analysis completed',
+		'color'   => $result['color'],
+		'tokens'  => $result['tokens_used']
+	) );
 }

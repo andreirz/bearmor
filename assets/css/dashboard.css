@@ -405,6 +405,7 @@
 	border-radius: 10px;
 	overflow: hidden;
 	margin-top: 24px;
+	max-width: 100%;
 }
 
 .bearmor-ai-header {
@@ -445,6 +446,27 @@
 	border-radius: 8px;
 	padding: 20px;
 	margin-bottom: 16px;
+}
+
+/* Color-based AI Report Styling */
+.bearmor-ai-report-green {
+	background-color: #d4edda;
+	border-color: #4CAF50;
+}
+
+.bearmor-ai-report-gray {
+	background-color: #e2e3e5;
+	border-color: #999;
+}
+
+.bearmor-ai-report-yellow {
+	background-color: #fff3cd;
+	border-color: #FF9800;
+}
+
+.bearmor-ai-report-red {
+	background-color: #f8d7da;
+	border-color: #F44336;
 }
 
 .bearmor-ai-intro {

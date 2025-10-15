@@ -33,17 +33,16 @@ wp_enqueue_style( 'bearmor-dashboard', BEARMOR_PLUGIN_URL . 'assets/css/dashboar
 
 		<!-- Quick Actions -->
 		<div class="bearmor-quick-actions">
-			<h3>Quick Actions</h3>
 			<div class="bearmor-actions-grid">
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-settings' ) ); ?>" class="bearmor-action-card">
 					<span class="dashicons dashicons-admin-settings"></span>
 					<span>Settings</span>
 				</a>
-				<a href="#" class="bearmor-action-card">
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-hardening' ) ); ?>" class="bearmor-action-card">
 					<span class="dashicons dashicons-shield-alt"></span>
 					<span>Apply Hardening</span>
 				</a>
-				<a href="#" class="bearmor-action-card">
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-malware-alerts' ) ); ?>" class="bearmor-action-card">
 					<span class="dashicons dashicons-search"></span>
 					<span>Run Scan</span>
 				</a>
@@ -53,7 +52,6 @@ wp_enqueue_style( 'bearmor-dashboard', BEARMOR_PLUGIN_URL . 'assets/css/dashboar
 
 	<!-- Widgets Grid -->
 	<div class="bearmor-widgets-grid">
-		
 		<!-- Last Scan Widget -->
 		<?php
 		$last_malware_scan = get_option( 'bearmor_last_malware_scan' );
