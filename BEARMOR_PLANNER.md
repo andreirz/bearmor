@@ -898,50 +898,7 @@ CREATE TABLE bearmor_reports (
 
 ---
 
-### 2G — Uptime Monitoring ⬜
-**Status:** Not Started  
-**Priority:** Medium  
-**Dependencies:** 3A (call-home server)
-
-**Tasks:**
-- [ ] **Server-side ping:**
-  - [ ] Call-home server pings site URL every 5 minutes
-  - [ ] Check HTTP status code (200 = up, else = down)
-  - [ ] Measure response time
-  - [ ] Store results on server
-- [ ] **Plugin receives uptime data:**
-  - [ ] Call-home response includes: `uptime_percentage`, `last_downtime`, `avg_response_time`
-  - [ ] Cache locally for 24h
-- [ ] Dashboard widget: Uptime
-  - [ ] Display: uptime % (last 30 days), last downtime, avg response time
-  - [ ] Visual: uptime graph (last 7 days)
-- [ ] Admin UI: Uptime page
-  - [ ] Detailed uptime history (last 90 days)
-  - [ ] Downtime incidents: timestamp, duration, status code
-  - [ ] Response time graph
-- [ ] Email notification for downtime (opt-in)
-  - [ ] Alert after 2 consecutive failed pings (10 min down)
-
-**Files to Create:**
-```
-includes/
-├── class-bearmor-uptime.php
-└── class-bearmor-uptime-display.php
-admin/
-└── uptime.php
-```
-
-**Server-side (separate project):**
-```
-bearmor-server/
-└── uptime-monitor/
-    ├── ping-scheduler.php (cron job)
-    └── uptime-api.php (return data to plugin)
-```
-
----
-
-### 2H — Performance & Safety Enhancements ⬜
+### 2G — Performance & Safety Enhancements ⬜
 **Status:** Not Started  
 **Priority:** Low  
 **Dependencies:** 1C, 1D, 2D
@@ -1015,7 +972,42 @@ bearmor-server/
 
 ---
 
-### 3B — Call-Home Daily ⬜
+### 3B — Uptime Monitoring ⬜
+**Status:** Not Started  
+**Priority:** Medium  
+**Dependencies:** 3A (call-home server)
+
+**Tasks:**
+- [ ] **Server-side ping:**
+  - [ ] Call-home server pings site URL every 5 minutes
+  - [ ] Check HTTP status code (200 = up, else = down)
+  - [ ] Measure response time
+  - [ ] Store results on server
+- [ ] **Plugin receives uptime data:**
+  - [ ] Call-home response includes: `uptime_percentage`, `last_downtime`, `avg_response_time`
+  - [ ] Cache locally for 24h
+- [ ] Dashboard widget: Uptime
+  - [ ] Display: uptime % (last 30 days), last downtime, avg response time
+  - [ ] Visual: uptime graph (last 7 days)
+- [ ] Admin UI: Uptime page
+  - [ ] Detailed uptime history (last 90 days)
+  - [ ] Downtime incidents: timestamp, duration, status code
+  - [ ] Response time graph
+- [ ] Email notification for downtime (opt-in)
+  - [ ] Alert after 2 consecutive failed pings (10 min down)
+
+**Files to Create:**
+```
+includes/
+├── class-bearmor-uptime.php
+└── class-bearmor-uptime-display.php
+admin/
+└── uptime.php
+```
+
+---
+
+### 3C — Call-Home Daily ⬜
 **Status:** Not Started  
 **Priority:** Critical  
 **Dependencies:** 3A
@@ -1049,7 +1041,7 @@ includes/
 
 ---
 
-### 3C — Safety & UX Rules ⬜
+### 3D — Safety & UX Rules ⬜
 **Status:** Not Started  
 **Priority:** High  
 **Dependencies:** All previous tasks
@@ -1092,7 +1084,7 @@ admin/
 
 ---
 
-### 3D — Testing Checklist ⬜
+### 3E — Testing Checklist ⬜
 **Status:** Not Started  
 **Priority:** Critical  
 **Dependencies:** All previous tasks
@@ -1190,7 +1182,7 @@ admin/
 
 ---
 
-### 3E — Minimal Architecture Notes ⬜
+### 3F — Minimal Architecture Notes ⬜
 **Status:** Not Started  
 **Priority:** Low  
 **Dependencies:** All previous tasks

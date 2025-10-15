@@ -108,6 +108,7 @@ function bearmor_generate_pdf_report() {
 	<div class="bearmor-widgets-grid">
 		<!-- Last Scan Widget -->
 		<?php
+		$last_malware_scan = get_option( 'bearmor_last_malware_scan' );
 		$scan_results = get_option( 'bearmor_malware_scan_results', array() );
 		
 		// Get threat counts by severity
