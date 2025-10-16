@@ -13,7 +13,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Save settings
 if ( isset( $_POST['bearmor_save_settings'] ) && check_admin_referer( 'bearmor_settings' ) ) {
 	$settings = get_option( 'bearmor_settings', array() );
-	$settings['scan_schedule'] = sanitize_text_field( $_POST['scan_schedule'] );
+	$scan_schedule = sanitize_text_field( $_POST['scan_schedule'] );
+	$settings['scan_schedule'] = $scan_schedule;
 	$settings['notification_email'] = sanitize_email( $_POST['notification_email'] );
 	$settings['auto_quarantine'] = isset( $_POST['auto_quarantine'] ) ? true : false;
 	$settings['auto_disable_vulnerable'] = isset( $_POST['auto_disable_vulnerable'] ) ? true : false;
@@ -24,6 +25,19 @@ if ( isset( $_POST['bearmor_save_settings'] ) && check_admin_referer( 'bearmor_s
 	$settings['firewall_blocked_countries'] = sanitize_text_field( $_POST['firewall_blocked_countries'] );
 	$settings['firewall_honeypot'] = isset( $_POST['firewall_honeypot'] ) ? true : false;
 	update_option( 'bearmor_settings', $settings );
+	
+	// Update scan scheduler based on schedule setting
+	if ( $scan_schedule === 'daily' ) {
+		Bearmor_Scan_Scheduler::set_scan_enabled( 'malware', true );
+	} else {
+		Bearmor_Scan_Scheduler::set_scan_enabled( 'malware', false );
+	}
+	// Deep scans are always manual-only (no automatic scheduling)
+	
+	// Save scan exclusions
+	if ( isset( $_POST['bearmor_scan_exclusions'] ) ) {
+		Bearmor_Exclusions::set_patterns_text( $_POST['bearmor_scan_exclusions'] );
+	}
 	
 	// Save 2FA settings
 	update_option( 'bearmor_2fa_enabled', isset( $_POST['bearmor_2fa_enabled'] ) );
@@ -50,14 +64,32 @@ if ( isset( $_POST['bearmor_apply_hardening'] ) && check_admin_referer( 'bearmor
 }
 
 $settings = get_option( 'bearmor_settings', array() );
+$license_info = Bearmor_License::get_info();
+$site_id = get_option( 'bearmor_site_id' );
 ?>
 
 <div class="wrap">
 	<h1>Bearmor Security Settings</h1>
+	
+	<!-- License Info Block -->
+	<div style="background: #fff; border: 1px solid #ccc; border-radius: 4px; padding: 20px; margin-bottom: 20px; max-width: 600px;">
+		<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+			<div>
+				<p style="margin: 0; font-size: 14px; color: #666;">Current Plan</p>
+				<p style="margin: 5px 0 0 0; font-size: 20px; font-weight: bold;"><?php echo esc_html( ucfirst( $license_info['plan'] ) ); ?></p>
+			</div>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-settings&action=refresh_license' ) ); ?>" class="button button-secondary">Refresh</a>
+		</div>
+		
+		<div style="border-top: 1px solid #eee; padding-top: 15px; font-size: 13px;">
+			<p style="margin: 0;"><strong>Site ID:</strong> <code style="background: #f5f5f5; padding: 2px 4px;"><?php echo esc_html( $site_id ); ?></code></p>
+			<p style="margin: 8px 0 0 0;"><a href="https://bearmor.com/support" target="_blank">Get Support</a> | <a href="https://bearmor.com/pricing" target="_blank">Upgrade Plan</a></p>
+		</div>
+	</div>
+	
 	<form method="post">
 		<?php wp_nonce_field( 'bearmor_settings' ); ?>
 		
-		<h2>General Settings</h2>
 		<table class="form-table">
 			<tr>
 				<th>Scan Schedule</th>
@@ -65,14 +97,43 @@ $settings = get_option( 'bearmor_settings', array() );
 					<select name="scan_schedule">
 						<option value="manual" <?php selected( $settings['scan_schedule'], 'manual' ); ?>>Manual</option>
 						<option value="daily" <?php selected( $settings['scan_schedule'], 'daily' ); ?>>Daily</option>
-						<option value="weekly" <?php selected( $settings['scan_schedule'], 'weekly' ); ?>>Weekly</option>
 					</select>
+					<p class="description">
+						<strong>Manual:</strong> Run scans manually only<br>
+						<em>Deep scans are manual-only (with batch processing to avoid slowdowns)</em>
+					</p>
 				</td>
 			</tr>
 			<tr>
 				<th>Notification Email</th>
 				<td>
-					<input type="email" name="notification_email" value="<?php echo esc_attr( $settings['notification_email'] ); ?>" class="regular-text">
+					<input type="email" name="notification_email" value="<?php echo esc_attr( isset( $settings['notification_email'] ) ? $settings['notification_email'] : '' ); ?>" class="regular-text">
+				</td>
+			</tr>
+		</table>
+
+		<h2>Scan Exclusions</h2>
+		<p class="description">Exclude files and folders from security scans. One pattern per line.</p>
+		<table class="form-table">
+			<tr>
+				<th scope="row">
+					<label for="bearmor_scan_exclusions">Exclusion Patterns</label>
+				</th>
+				<td>
+					<textarea 
+						id="bearmor_scan_exclusions" 
+						name="bearmor_scan_exclusions" 
+						rows="6" 
+						cols="50"
+						placeholder="node_modules/&#10;vendor/&#10;*.min.js&#10;wp-content/cache/"
+					><?php echo esc_textarea( Bearmor_Exclusions::get_patterns_text() ); ?></textarea>
+					<p class="description">
+						<strong>Examples:</strong><br>
+						<code>node_modules/</code> - Exclude directory<br>
+						<code>*.min.js</code> - Exclude file pattern<br>
+						<code>wp-backup-*</code> - Exclude with wildcard<br>
+						<code>.git/</code> - Exclude .git folder
+					</p>
 				</td>
 			</tr>
 		</table>

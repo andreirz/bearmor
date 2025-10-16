@@ -24,14 +24,21 @@ define( 'BEARMOR_PLUGIN_FILE', __FILE__ );
 define( 'BEARMOR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BEARMOR_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
+// Load registration classes (will be used for call-home)
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-site-registration.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-license.php';
 
 /**
  * Plugin activation
  */
 function bearmor_activate() {
-	// Generate unique site ID
+	error_log( 'BEARMOR: Plugin activated' );
+	
+	// Generate unique site ID (registration happens on first call-home)
 	if ( ! get_option( 'bearmor_site_id' ) ) {
-		add_option( 'bearmor_site_id', wp_generate_uuid4() );
+		$site_id = wp_generate_uuid4();
+		add_option( 'bearmor_site_id', $site_id );
+		error_log( 'BEARMOR: Generated site ID: ' . $site_id );
 	}
 
 	// Set default settings
@@ -313,6 +320,9 @@ function bearmor_activate() {
 		// Show admin notice to run baseline scan
 		add_option( 'bearmor_show_baseline_notice', true );
 	}
+
+	// Registration will happen on first call-home (daily via WP Cron)
+	error_log( 'BEARMOR: Activation complete. Registration will happen on first call-home.' );
 }
 register_activation_hook( __FILE__, 'bearmor_activate' );
 
@@ -347,6 +357,9 @@ require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-uploads-scanner.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-summary-builder.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-ai-analyzer.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-pdf-generator.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-scan-scheduler.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-batch-processor.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-exclusions.php';
 
 /**
  * Initialize security features
@@ -357,6 +370,7 @@ Bearmor_Login_Protection::init();
 Bearmor_Anomaly_Detector::init();
 Bearmor_Hardening::init();
 Bearmor_2FA::init();
+Bearmor_Scan_Scheduler::init();
 Bearmor_Activity_Log::init();
 Bearmor_Vulnerability_Scanner::init();
 
@@ -675,6 +689,7 @@ function bearmor_admin_menu() {
 		'bearmor_vulnerabilities_page'
 	);
 
+
 	add_submenu_page(
 		'bearmor-security',
 		'Settings',
@@ -791,6 +806,41 @@ function bearmor_vulnerabilities_page() {
 function bearmor_settings_page() {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		wp_die( 'Access denied' );
+	}
+	
+	// Handle refresh license action
+	if ( isset( $_GET['action'] ) && $_GET['action'] === 'refresh_license' ) {
+		error_log( '=== BEARMOR: Manual license refresh triggered ===' );
+		$site_id = get_option( 'bearmor_site_id' );
+		error_log( 'BEARMOR: Site ID: ' . ( $site_id ? $site_id : 'NOT FOUND' ) );
+		
+		if ( ! $site_id ) {
+			error_log( 'BEARMOR: Site ID not found' );
+			?>
+			<div class="notice notice-error"><p><strong>Error:</strong> Site ID not found. Please reactivate the plugin.</p></div>
+			<?php
+		} else {
+			error_log( 'BEARMOR: Calling verify endpoint' );
+			$result = Bearmor_Site_Registration::call_home( 'verify', array(
+				'site_id' => $site_id,
+				'url'     => home_url(),
+			) );
+			error_log( 'BEARMOR: call_home result: ' . print_r( $result, true ) );
+			
+			if ( is_wp_error( $result ) ) {
+				error_log( 'BEARMOR: Error from call_home: ' . $result->get_error_message() );
+				?>
+				<div class="notice notice-error"><p><strong>Error:</strong> <?php echo esc_html( $result->get_error_message() ); ?></p></div>
+				<?php
+			} else {
+				error_log( 'BEARMOR: Updating license from response' );
+				Bearmor_License::update_from_response( $result );
+				?>
+				<div class="notice notice-success"><p>License refreshed successfully!</p></div>
+				<?php
+			}
+		}
+		error_log( '=== BEARMOR: Manual license refresh complete ===' );
 	}
 	
 	require_once BEARMOR_PLUGIN_DIR . 'admin/settings.php';
