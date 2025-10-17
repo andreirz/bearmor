@@ -27,6 +27,7 @@ define( 'BEARMOR_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 // Load registration classes (will be used for call-home)
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-site-registration.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-license.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-callhome.php';
 
 /**
  * Plugin activation
@@ -321,8 +322,12 @@ function bearmor_activate() {
 		add_option( 'bearmor_show_baseline_notice', true );
 	}
 
+	// Trigger activation hook for call-home and scheduling
+	error_log( 'BEARMOR: Firing bearmor_plugin_activated hook' );
+	do_action( 'bearmor_plugin_activated' );
+	
 	// Registration will happen on first call-home (daily via WP Cron)
-	error_log( 'BEARMOR: Activation complete. Registration will happen on first call-home.' );
+	error_log( 'BEARMOR: Activation complete. Daily call-home scheduled.' );
 }
 register_activation_hook( __FILE__, 'bearmor_activate' );
 
@@ -330,8 +335,11 @@ register_activation_hook( __FILE__, 'bearmor_activate' );
  * Plugin deactivation
  */
 function bearmor_deactivate() {
-	// Cleanup if needed
+	error_log( 'BEARMOR: Plugin deactivated' );
+	do_action( 'bearmor_plugin_deactivated' );
 }
+register_deactivation_hook( __FILE__, 'bearmor_deactivate' );
+
 /**
  * Load required classes
  */
@@ -364,6 +372,7 @@ require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-exclusions.php';
 /**
  * Initialize security features
  */
+Bearmor_CallHome::init();
 Bearmor_Firewall::init();
 Bearmor_Honeypot::init();
 Bearmor_Login_Protection::init();
