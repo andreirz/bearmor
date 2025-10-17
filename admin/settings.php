@@ -66,10 +66,42 @@ if ( isset( $_POST['bearmor_apply_hardening'] ) && check_admin_referer( 'bearmor
 $settings = get_option( 'bearmor_settings', array() );
 $license_info = Bearmor_License::get_info();
 $site_id = get_option( 'bearmor_site_id' );
+
+// Check license verification status for warning
+$last_verified = $license_info['last_verified'];
+$grace_period = $license_info['grace_period'];
+$days_since_verified = 0;
+
+if ( $last_verified ) {
+	$days_since_verified = floor( ( time() - strtotime( $last_verified ) ) / DAY_IN_SECONDS );
+}
 ?>
 
 <div class="wrap">
 	<h1>Bearmor Security Settings</h1>
+	
+	<?php
+	// Show warning if license verification is failing
+	if ( $days_since_verified >= 3 && $days_since_verified < $grace_period ) {
+		?>
+		<div class="notice notice-warning"><p>
+			<strong>⚠️ License Verification Failing:</strong> 
+			Last successful check was <?php echo esc_html( $days_since_verified ); ?> days ago. 
+			The plugin will automatically retry. 
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-settings&action=refresh_license' ) ); ?>">Retry now</a>
+		</p></div>
+		<?php
+	} elseif ( $days_since_verified >= $grace_period ) {
+		?>
+		<div class="notice notice-error"><p>
+			<strong>❌ License Verification Failed:</strong> 
+			No successful verification for <?php echo esc_html( $grace_period ); ?> days. 
+			Pro features are disabled. Free features continue to work.
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-settings&action=refresh_license' ) ); ?>">Retry now</a>
+		</p></div>
+		<?php
+	}
+	?>
 	
 	<!-- License Info Block -->
 	<div style="background: #fff; border: 1px solid #ccc; border-radius: 4px; padding: 20px; margin-bottom: 20px; max-width: 600px;">
