@@ -14,16 +14,43 @@ if ( ! defined( 'ABSPATH' ) ) {
 $settings = get_option( 'bearmor_settings', array() );
 $last_scan = get_option( 'bearmor_last_scan_time' );
 
+// Get license info
+$license_info = Bearmor_License::get_info();
+$is_pro = Bearmor_License::is_pro();
+$plan = $license_info['plan'];
+$expires = $license_info['expires'];
+
 // Enqueue dashboard styles
 wp_enqueue_style( 'bearmor-dashboard', BEARMOR_PLUGIN_URL . 'assets/css/dashboard.css', array(), BEARMOR_VERSION );
 ?>
 
 <div class="wrap bearmor-dashboard">
-	<div class="bearmor-header">
-		<h1>
+	<div class="bearmor-header" style="display: flex; justify-content: space-between; align-items: center;">
+		<h1 style="margin: 0;">
 			<span class="dashicons dashicons-shield" style="color: #8269FF;"></span>
 			Bearmor Security
 		</h1>
+		
+		<!-- Plan Badge -->
+		<div style="display: flex; align-items: center; gap: 10px;">
+			<?php
+			$badge_color = $is_pro ? '#8269FF' : '#999';
+			$badge_text = $is_pro ? 'PRO' : 'FREE';
+			$badge_title = $is_pro && $expires ? 'Expires: ' . esc_attr( $expires ) : 'Free tier';
+			?>
+			<div style="
+				background: <?php echo esc_attr( $badge_color ); ?>;
+				color: white;
+				padding: 6px 12px;
+				border-radius: 20px;
+				font-size: 12px;
+				font-weight: 600;
+				cursor: help;
+				title: '<?php echo esc_attr( $badge_title ); ?>'
+			" title="<?php echo esc_attr( $badge_title ); ?>">
+				<?php echo esc_html( $badge_text ); ?>
+			</div>
+		</div>
 	</div>
 
 	<!-- Top Row: Score + Quick Actions -->

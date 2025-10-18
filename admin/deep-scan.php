@@ -11,6 +11,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// Check if Pro feature is available
+$is_pro = Bearmor_License::is_pro();
+
 // Get active tab
 $active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( $_GET['tab'] ) : 'database';
 
@@ -35,8 +38,71 @@ $uploads_results = $wpdb->get_results(
 	<h1>🔍 Deep Scan</h1>
 	<p>Scan your database and uploads folder for malicious code injections.</p>
 
+	<?php if ( ! $is_pro ) : ?>
+	<!-- Pro Feature Overlay -->
+	<div style="background: #f5f5f5; border: 2px solid #ddd; border-radius: 8px; padding: 40px; text-align: center; margin: 20px 0;">
+		<h2 style="color: #666; margin-top: 0;">🔒 Pro Feature</h2>
+		<p style="color: #999; font-size: 16px; margin: 10px 0;">
+			Deep Scan is available for Pro members only.
+		</p>
+		<p style="color: #999; margin: 20px 0;">
+			Scan your database and uploads folder for hidden malware, injected code, and suspicious files.
+		</p>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-settings' ) ); ?>" class="button button-primary" style="background: #8269FF; border-color: #8269FF;">
+			Upgrade to Pro
+		</a>
+	</div>
+
+	<!-- Example Preview (grayed out) -->
+	<div style="opacity: 0.5; filter: grayscale(100%); margin-top: 30px;">
+		<h3 style="color: #999;">Example Scan Results:</h3>
+		<table class="wp-list-table widefat fixed striped" style="font-size: 12px;">
+			<thead>
+				<tr>
+					<th>Location</th>
+					<th style="width: 100px;">Threat Type</th>
+					<th style="width: 80px;">Severity</th>
+					<th style="width: 100px;">Detected</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>
+						<strong>wp_posts.post_content (ID: 42)</strong><br>
+						<small style="color: #999;">database scan</small>
+					</td>
+					<td>Malicious Script</td>
+					<td>
+						<span style="background: #d63638; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px; font-weight: 600;">
+							Critical
+						</span>
+					</td>
+					<td><small>Oct 17, 14:32</small></td>
+				</tr>
+				<tr>
+					<td>
+						<strong>/wp-content/uploads/2024/01/shell.php</strong><br>
+						<small style="color: #999;">uploads scan</small>
+					</td>
+					<td>Web Shell</td>
+					<td>
+						<span style="background: #d63638; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px; font-weight: 600;">
+							Critical
+						</span>
+					</td>
+					<td><small>Oct 16, 09:15</small></td>
+				</tr>
+			</tbody>
+		</table>
+		<p style="text-align: center; color: #999; font-size: 11px; margin-top: 10px;">
+			<em>Demo data - This is what you'll see with Pro</em>
+		</p>
+	</div>
+	<?php endif; ?>
+
+	<?php if ( $is_pro ) : ?>
 	<!-- Tabs -->
-	<h2 class="nav-tab-wrapper">
+	<h2 class="nav-tab-wrapper" style="margin-top: 20px;">
 		<a href="?page=bearmor-deep-scan&tab=database" class="nav-tab <?php echo $active_tab === 'database' ? 'nav-tab-active' : ''; ?>">
 			Database Scan
 		</a>
@@ -452,3 +518,4 @@ jQuery(document).ready(function($) {
 	});
 });
 </script>
+	<?php endif; ?>

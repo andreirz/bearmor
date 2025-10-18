@@ -10,6 +10,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// Check if Pro feature is available
+$is_pro = Bearmor_License::is_pro();
+
 // Handle manual scan
 if ( isset( $_POST['bearmor_scan_vulnerabilities'] ) && check_admin_referer( 'bearmor_scan_vulnerabilities' ) ) {
 	Bearmor_Vulnerability_Scanner::scan_all( true ); // Force refresh, skip cache
@@ -64,6 +67,89 @@ wp_enqueue_style( 'bearmor-dashboard', plugins_url( 'assets/css/dashboard.css', 
 		<p class="bearmor-subtitle">Check plugins and themes for known security vulnerabilities</p>
 	</div>
 
+	<?php if ( ! $is_pro ) : ?>
+		<!-- Pro Feature Overlay -->
+		<div style="
+			background: #f5f5f5;
+			border: 2px solid #ddd;
+			border-radius: 8px;
+			padding: 40px;
+			text-align: center;
+			margin: 20px 0;
+		">
+			<h2 style="color: #666; margin-top: 0;">🔒 Pro Feature</h2>
+			<p style="color: #999; font-size: 16px; margin: 10px 0;">
+				Vulnerability Scanner is available for Pro members only.
+			</p>
+			<p style="color: #999; margin: 20px 0;">
+				Check your plugins and themes against the WPScan vulnerability database to identify security issues before they become a problem.
+			</p>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-settings' ) ); ?>" class="button button-primary" style="background: #8269FF; border-color: #8269FF;">
+				Upgrade to Pro
+			</a>
+		</div>
+	<?php endif; ?>
+
+	<?php if ( ! $is_pro ) : ?>
+	<!-- Example Preview (grayed out) -->
+	<div style="opacity: 0.5; filter: grayscale(100%); margin-top: 30px;">
+		<h3 style="color: #999;">Example Vulnerabilities:</h3>
+		<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0;">
+			<div style="background: #fff; border-left: 4px solid #d63638; padding: 20px; border-radius: 5px;">
+				<h3 style="margin: 0; font-size: 32px; color: #d63638;">2</h3>
+				<p style="margin: 5px 0 0 0; color: #666;">Critical</p>
+			</div>
+			<div style="background: #fff; border-left: 4px solid #f56e28; padding: 20px; border-radius: 5px;">
+				<h3 style="margin: 0; font-size: 32px; color: #f56e28;">1</h3>
+				<p style="margin: 5px 0 0 0; color: #666;">High</p>
+			</div>
+		</div>
+
+		<table class="wp-list-table widefat fixed striped" style="font-size: 12px;">
+			<thead>
+				<tr>
+					<th>Plugin/Theme</th>
+					<th style="width: 80px;">Severity</th>
+					<th>Vulnerability</th>
+					<th style="width: 100px;">Fixed In</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr>
+					<td>
+						<strong>WooCommerce</strong><br>
+						<small style="color: #999;">plugin</small>
+					</td>
+					<td>
+						<span style="background: #d63638; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px; font-weight: 600;">
+							Critical
+						</span>
+					</td>
+					<td>Unauthenticated SQL Injection</td>
+					<td><code style="background: #f5f5f5; padding: 2px 4px;">v7.2.0</code></td>
+				</tr>
+				<tr>
+					<td>
+						<strong>Elementor</strong><br>
+						<small style="color: #999;">plugin</small>
+					</td>
+					<td>
+						<span style="background: #f56e28; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px; font-weight: 600;">
+							High
+						</span>
+					</td>
+					<td>Stored XSS in Page Builder</td>
+					<td><code style="background: #f5f5f5; padding: 2px 4px;">v3.15.0</code></td>
+				</tr>
+			</tbody>
+		</table>
+		<p style="text-align: center; color: #999; font-size: 11px; margin-top: 10px;">
+			<em>Demo data - This is what you'll see with Pro</em>
+		</p>
+	</div>
+	<?php endif; ?>
+
+	<?php if ( $is_pro ) : ?>
 	<!-- Stats Cards -->
 	<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0;">
 		<div style="background: #fff; border-left: 4px solid #d63638; padding: 20px; border-radius: 5px;">
@@ -245,3 +331,4 @@ wp_enqueue_style( 'bearmor-dashboard', plugins_url( 'assets/css/dashboard.css', 
 		</ul>
 	</div>
 </div>
+	<?php endif; ?>

@@ -27,7 +27,15 @@ class Bearmor_License {
 	 * @return bool Is Pro enabled
 	 */
 	public static function is_pro() {
-		return get_transient( 'bearmor_pro_enabled' ) === true;
+		// Check transient first (24h cache)
+		$pro_enabled = get_transient( 'bearmor_pro_enabled' );
+		if ( $pro_enabled === true ) {
+			return true;
+		}
+		
+		// Fallback: check if plan is pro/trial (in case transient expired)
+		$plan = self::get_plan();
+		return in_array( $plan, array( 'pro', 'trial' ), true );
 	}
 
 	/**

@@ -11,6 +11,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// Check if Pro feature is available
+$is_pro = Bearmor_License::is_pro();
+
 // === ACTIVITY LOG ===
 // Get filter parameters
 $action_filter = isset( $_GET['action_filter'] ) ? sanitize_text_field( $_GET['action_filter'] ) : '';
@@ -206,33 +209,71 @@ wp_enqueue_style( 'bearmor-dashboard', plugins_url( 'assets/css/dashboard.css', 
 	<?php endif; ?>
 
 		</div><!-- End Activity Log Column -->
+	
+	<!-- RIGHT: Firewall Blocks -->
+	<div>
+		<h2 style="margin: 0 0 15px 0;">🔥 Firewall Blocks</h2>
 		
-		<!-- RIGHT: Firewall Blocks -->
-		<div>
-			<h2 style="margin: 0 0 15px 0;">🔥 Firewall Blocks</h2>
-			
-			<!-- Firewall Stats -->
-			<div style="background: #fff; border: 1px solid #ccc; padding: 10px; margin-bottom: 15px; border-radius: 5px;">
-				<div style="display: flex; justify-content: space-between; font-size: 12px;">
-					<span><strong>Total Blocks:</strong> <?php echo number_format( $firewall_total ); ?></span>
-					<span><strong>Last 24h:</strong> <?php
-						$last_24h = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_firewall_blocks WHERE blocked_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)" );
-						echo number_format( $last_24h );
-					?></span>
-				</div>
+		<?php if ( ! $is_pro ) : ?>
+			<!-- Pro Feature Overlay -->
+			<div style="
+				background: #f5f5f5;
+				border: 2px solid #ddd;
+				border-radius: 8px;
+				padding: 30px;
+				text-align: center;
+				margin: 20px 0;
+			">
+				<h3 style="color: #666; margin-top: 0;">🔒 Pro Feature</h3>
+				<p style="color: #999; font-size: 14px; margin: 10px 0;">
+					Advanced Firewall is available for Pro members only.
+				</p>
+				<p style="color: #999; margin: 20px 0;">
+					Block malicious requests (SQL injection, XSS, path traversal) with advanced request filtering.
+				</p>
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-settings' ) ); ?>" class="button button-primary" style="background: #8269FF; border-color: #8269FF;">
+					Upgrade to Pro
+				</a>
 			</div>
-			
-			<!-- Firewall Table -->
-			<div style="background: #fff; border: 1px solid #ccc; border-radius: 5px; overflow: hidden;">
-				<table class="wp-list-table widefat fixed striped" style="font-size: 12px;">
-					<thead>
-						<tr>
-							<th style="width: 100px;">Time</th>
-							<th style="width: 100px;">IP Address</th>
-							<th>Attack Type</th>
-							<th>Request URI</th>
-						</tr>
-					</thead>
+		<?php endif; ?>
+<?php if ( ! $is_pro ) : ?>
+<!-- Example Preview (grayed out) -->
+<div style="opacity: 0.5; filter: grayscale(100%); margin-top: 20px;">
+<h3 style="color: #999;">Example Firewall Blocks:</h3>
+<div style="background: #fff; border: 1px solid #ccc; padding: 10px; margin-bottom: 15px; border-radius: 5px;">
+<div style="display: flex; justify-content: space-between; font-size: 12px;">
+<span><strong>Total Blocks:</strong> 1,247</span>
+<span><strong>Last 24h:</strong> 89</span>
+</div>
+</div>
+<table class="wp-list-table widefat fixed striped" style="font-size: 12px;"><thead><tr><th style="width: 100px;">Time</th><th style="width: 100px;">IP Address</th><th>Rule Matched</th><th>Request URI</th></tr></thead><tbody><tr><td><strong>Oct 18</strong><br><small style="color: #666;">14:32</small></td><td><code style="font-size: 10px;">203.0.113.45</code></td><td><span style="background: #d63638; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: 600;">SQL Injection</span></td><td><small style="color: #666; font-size: 10px;">/wp-admin/admin-ajax.php?id=1 OR 1=1</small></td></tr><tr><td><strong>Oct 18</strong><br><small style="color: #666;">12:15</small></td><td><code style="font-size: 10px;">198.51.100.89</code></td><td><span style="background: #d63638; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: 600;">XSS Attack</span></td><td><small style="color: #666; font-size: 10px;">/search?q=&lt;script&gt;alert()</small></td></tr></tbody></table>
+<p style="text-align: center; color: #999; font-size: 11px; margin-top: 10px;"><em>Demo data - This is what you'll see with Pro</em></p>
+</div>
+<?php endif; ?>
+		
+		<?php if ( $is_pro ) : ?>
+		<!-- Firewall Stats -->
+		<div style="background: #fff; border: 1px solid #ccc; padding: 10px; margin-bottom: 15px; border-radius: 5px;">
+			<div style="display: flex; justify-content: space-between; font-size: 12px;">
+				<span><strong>Total Blocks:</strong> <?php echo number_format( $firewall_total ); ?></span>
+				<span><strong>Last 24h:</strong> <?php
+					$last_24h = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_firewall_blocks WHERE blocked_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)" );
+					echo number_format( $last_24h );
+				?></span>
+			</div>
+		</div>
+		
+		<!-- Firewall Table -->
+		<div style="background: #fff; border: 1px solid #ccc; border-radius: 5px; overflow: hidden;">
+			<table class="wp-list-table widefat fixed striped" style="font-size: 12px;">
+				<thead>
+					<tr>
+						<th style="width: 100px;">Time</th>
+						<th style="width: 100px;">IP Address</th>
+						<th>Rule Matched</th>
+						<th>Request URI</th>
+					</tr>
+				</thead>
 					<tbody>
 						<?php if ( empty( $firewall_blocks ) ) : ?>
 							<tr>
@@ -287,6 +328,7 @@ wp_enqueue_style( 'bearmor-dashboard', plugins_url( 'assets/css/dashboard.css', 
 				</div>
 			<?php endif; ?>
 		</div><!-- End Firewall Column -->
+		<?php endif; ?>
 		
 	</div><!-- End Two Column Grid -->
 

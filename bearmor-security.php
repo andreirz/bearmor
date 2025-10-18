@@ -28,6 +28,7 @@ define( 'BEARMOR_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-site-registration.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-license.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-callhome.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-placeholder.php';
 
 /**
  * Plugin activation

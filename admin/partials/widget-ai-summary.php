@@ -10,8 +10,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// Check if Pro feature is available
+$is_pro = Bearmor_License::is_pro();
+
 // Get latest AI analysis
-$analysis = Bearmor_AI_Analyzer::get_latest_analysis();
+$analysis = $is_pro ? Bearmor_AI_Analyzer::get_latest_analysis() : null;
 
 // Debug: Check if table exists and has data
 global $wpdb;
@@ -34,7 +37,27 @@ $color_rating = $analysis ? $analysis['color_rating'] : 'gray';
 		</div>
 	</div>
 	<div class="bearmor-ai-content">
-		<?php if ( $analysis ) : ?>
+		<?php if ( ! $is_pro ) : ?>
+			<!-- Pro Feature Overlay -->
+			<div style="
+				background: #f5f5f5;
+				border: 2px solid #ddd;
+				border-radius: 8px;
+				padding: 30px;
+				text-align: center;
+			">
+				<h3 style="color: #666; margin-top: 0;">🔒 Pro Feature</h3>
+				<p style="color: #999; font-size: 14px; margin: 10px 0;">
+					AI Security Summary is available for Pro members only.
+				</p>
+				<p style="color: #999; margin: 20px 0;">
+					Get AI-powered analysis of your security data with actionable insights and recommendations.
+				</p>
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-settings' ) ); ?>" class="button button-primary" style="background: #8269FF; border-color: #8269FF;">
+					Upgrade to Pro
+				</a>
+			</div>
+		<?php elseif ( $analysis ) : ?>
 		<!-- AI Response with color-based class -->
 		<div class="bearmor-ai-report bearmor-ai-report-<?php echo esc_attr( $color_rating ); ?>" style="padding: 15px; border-radius: 8px; margin-bottom: 15px;">
 			<p class="bearmor-ai-meta" style="margin: 0 0 12px 0; font-size: 12px; color: #666;">

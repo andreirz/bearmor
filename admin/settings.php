@@ -108,13 +108,34 @@ if ( $last_verified ) {
 		<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
 			<div>
 				<p style="margin: 0; font-size: 14px; color: #666;">Current Plan</p>
-				<p style="margin: 5px 0 0 0; font-size: 20px; font-weight: bold;"><?php echo esc_html( ucfirst( $license_info['plan'] ) ); ?></p>
+				<div style="display: flex; align-items: center; gap: 10px; margin-top: 5px;">
+					<p style="margin: 0; font-size: 20px; font-weight: bold;"><?php echo esc_html( ucfirst( $license_info['plan'] ) ); ?></p>
+					<?php
+					$badge_color = $license_info['pro_enabled'] ? '#8269FF' : '#999';
+					$badge_text = $license_info['pro_enabled'] ? 'PRO' : 'FREE';
+					?>
+					<span style="
+						background: <?php echo esc_attr( $badge_color ); ?>;
+						color: white;
+						padding: 4px 10px;
+						border-radius: 12px;
+						font-size: 11px;
+						font-weight: 600;
+					">
+						<?php echo esc_html( $badge_text ); ?>
+					</span>
+				</div>
 			</div>
 			<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-settings&action=refresh_license' ) ); ?>" class="button button-secondary">Refresh</a>
 		</div>
 		
 		<div style="border-top: 1px solid #eee; padding-top: 15px; font-size: 13px;">
 			<p style="margin: 0;"><strong>Site ID:</strong> <code style="background: #f5f5f5; padding: 2px 4px;"><?php echo esc_html( $site_id ); ?></code></p>
+			<?php if ( $license_info['expires'] ) : ?>
+				<p style="margin: 8px 0 0 0;"><strong>Expires:</strong> <?php echo esc_html( $license_info['expires'] ); ?></p>
+			<?php endif; ?>
+			<p style="margin: 8px 0 0 0;"><strong>Last Verified:</strong> <?php echo $license_info['last_verified'] ? esc_html( $license_info['last_verified'] ) : 'Never'; ?></p>
+			<p style="margin: 8px 0 0 0;"><strong>Paid Features:</strong> Deep Scan, Vulnerability Scanner, Firewall, AI Analysis, Uptime Monitoring</p>
 			<p style="margin: 8px 0 0 0;"><a href="https://bearmor.com/support" target="_blank">Get Support</a> | <a href="https://bearmor.com/pricing" target="_blank">Upgrade Plan</a></p>
 		</div>
 	</div>
