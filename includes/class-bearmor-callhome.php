@@ -68,8 +68,9 @@ class Bearmor_CallHome {
 		
 		// Call verify endpoint
 		$result = Bearmor_Site_Registration::call_home( 'verify', array(
-			'site_id' => $site_id,
-			'url'     => home_url(),
+			'site_id'     => $site_id,
+			'url'         => home_url(),
+			'admin_email' => get_option( 'admin_email' ),
 		) );
 		
 		if ( is_wp_error( $result ) ) {
