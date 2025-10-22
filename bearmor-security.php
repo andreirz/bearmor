@@ -296,13 +296,21 @@ function bearmor_activate() {
 	) $charset_collate;";
 	dbDelta( $sql );
 	
-	// Manually add ai_prompt column if it doesn't exist (dbDelta doesn't modify existing tables)
+	// Manually add missing columns if they don't exist (dbDelta doesn't modify existing tables)
 	$table_name = $wpdb->prefix . 'bearmor_ai_analyses';
 	$columns = $wpdb->get_results( "SHOW COLUMNS FROM {$table_name}" );
 	$column_names = wp_list_pluck( $columns, 'Field' );
 	
 	if ( ! in_array( 'ai_prompt', $column_names ) ) {
 		$wpdb->query( "ALTER TABLE {$table_name} ADD COLUMN ai_prompt LONGTEXT NOT NULL AFTER summary_data" );
+	}
+	
+	if ( ! in_array( 'discretionary_score', $column_names ) ) {
+		$wpdb->query( "ALTER TABLE {$table_name} ADD COLUMN discretionary_score INT DEFAULT 0 AFTER ai_response" );
+	}
+	
+	if ( ! in_array( 'score_reason', $column_names ) ) {
+		$wpdb->query( "ALTER TABLE {$table_name} ADD COLUMN score_reason TEXT AFTER discretionary_score" );
 	}
 
 	// Create quarantine directory
@@ -369,6 +377,7 @@ require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-pdf-generator.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-scan-scheduler.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-batch-processor.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-exclusions.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-security-score.php';
 
 /**
  * Initialize security features

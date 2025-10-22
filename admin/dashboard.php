@@ -53,12 +53,9 @@ wp_enqueue_style( 'bearmor-dashboard', BEARMOR_PLUGIN_URL . 'assets/css/dashboar
 		</div>
 	</div>
 
-	<!-- Top Row: Score + Quick Actions -->
+	<!-- Top Row: Quick Actions + Score + AI Summary -->
 	<div class="bearmor-top-row">
-		<!-- Security Score -->
-		<?php require BEARMOR_PLUGIN_DIR . 'admin/partials/widget-security-score.php'; ?>
-
-		<!-- Quick Actions - Two Columns -->
+		<!-- Quick Actions - Left (1/3) -->
 		<div class="bearmor-quick-actions">
 			<!-- Left Column: Settings, Hardening, Scan -->
 			<div class="bearmor-actions-column">
@@ -89,6 +86,13 @@ wp_enqueue_style( 'bearmor-dashboard', BEARMOR_PLUGIN_URL . 'assets/css/dashboar
 				</div>
 			</div>
 		</div>
+
+		<!-- Security Score - Middle (1/6) -->
+		<?php require BEARMOR_PLUGIN_DIR . 'admin/partials/widget-security-score.php'; ?>
+
+		<!-- AI Security Summary - Right (1/3) -->
+		<?php require BEARMOR_PLUGIN_DIR . 'admin/partials/widget-ai-summary.php'; ?>
+	</div>
 
 <script>
 function bearmor_generate_pdf_report() {
@@ -128,8 +132,6 @@ function bearmor_generate_pdf_report() {
 	});
 }
 </script>
-
-</div>
 
 	<!-- Widgets Grid -->
 	<div class="bearmor-widgets-grid">
@@ -199,8 +201,5 @@ function bearmor_generate_pdf_report() {
 		<?php require BEARMOR_PLUGIN_DIR . 'admin/partials/widget-uptime.php'; ?>
 
 	</div>
-
-	<!-- AI Security Summary (Full Width) -->
-	<?php require BEARMOR_PLUGIN_DIR . 'admin/partials/widget-ai-summary.php'; ?>
 
 </div>

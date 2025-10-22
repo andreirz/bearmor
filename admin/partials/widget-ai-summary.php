@@ -26,10 +26,45 @@ if ( $analysis ) {
 	error_log( "BEARMOR AI Widget: Latest analysis ID: " . $analysis['id'] . ", Created: " . $analysis['created_at'] );
 }
 
+// Calculate score for color class
+$score_class = 'neutral';
+if ( $analysis ) {
+	// Calculate fixed + discretionary score
+	$fixed_score = 0;
+	$threats = Bearmor_Malware_Scanner::get_threats( 'pending' );
+	if ( empty( $threats ) ) {
+		$fixed_score += 25;
+	}
+	if ( get_option( 'bearmor_header_x_frame' ) ) {
+		$fixed_score += 10;
+	}
+	if ( get_option( 'bearmor_2fa_enabled' ) ) {
+		$fixed_score += 5;
+	}
+	if ( is_ssl() ) {
+		$fixed_score += 5;
+	}
+	$fixed_score += 10; // Firewall
+	
+	$discretionary_score = isset( $analysis['discretionary_score'] ) ? $analysis['discretionary_score'] : 0;
+	$total_score = min( $fixed_score + $discretionary_score, 100 );
+	
+	// Map score to class
+	if ( $total_score >= 80 ) {
+		$score_class = 'excellent';
+	} elseif ( $total_score >= 60 ) {
+		$score_class = 'good';
+	} elseif ( $total_score >= 40 ) {
+		$score_class = 'warning';
+	} else {
+		$score_class = 'critical';
+	}
+}
+
 $color_rating = $analysis ? $analysis['color_rating'] : 'gray';
 ?>
 
-<div class="bearmor-ai-summary">
+<div class="bearmor-ai-summary bearmor-ai-summary-<?php echo esc_attr( $score_class ); ?>">
 	<div class="bearmor-ai-header">
 		<div class="bearmor-ai-title">
 			<span class="dashicons dashicons-shield-alt"></span>
@@ -64,7 +99,15 @@ $color_rating = $analysis ? $analysis['color_rating'] : 'gray';
 Analysis from <?php echo esc_html( $analysis['model_used'] ); ?> (<?php echo number_format( $analysis['tokens_used'] ); ?> tokens) - <?php echo human_time_diff( strtotime( $analysis['created_at'] ), current_time( 'timestamp' ) ); ?> ago
 			</p>
 			<div class="bearmor-ai-response" style="line-height: 1.6; font-size: 14px; white-space: pre-wrap;">
-<?php echo esc_html( $analysis['ai_response'] ); ?>
+<?php 
+	// Convert markdown to HTML
+	$response = $analysis['ai_response'];
+	// Bold: **text** -> <strong>text</strong>
+	$response = preg_replace( '/\*\*(.+?)\*\*/', '<strong>$1</strong>', $response );
+	// Italic: *text* -> <em>text</em>
+	$response = preg_replace( '/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/', '<em>$1</em>', $response );
+	echo wp_kses_post( $response );
+?>
 			</div>
 		</div>
 
@@ -84,7 +127,7 @@ Analysis from <?php echo esc_html( $analysis['model_used'] ); ?> (<?php echo num
 					<p style="margin: 0 0 10px 0; font-size: 11px; color: #666; font-weight: bold;">
 						SYSTEM MESSAGE (AI Behavior):
 					</p>
-					<pre style="margin: 0 0 15px 0; padding: 10px; background: #f9f9f9; border: 1px solid #eee; border-radius: 3px; font-size: 11px; overflow-x: auto; white-space: pre-wrap;">You are a friendly, helpful WordPress security advisor. Your job is to help shop owners understand their site security in simple, non-technical language. Be reassuring and positive. You MUST start every response with [COLOR-RATING: X] where X is GREEN, GRAY, YELLOW, or RED. Remember: firewall blocks, failed logins, and login anomalies are GOOD - they mean the plugin is protecting the site.</pre>
+					<pre style="margin: 0 0 15px 0; padding: 10px; background: #f9f9f9; border: 1px solid #eee; border-radius: 3px; font-size: 11px; overflow-x: auto; white-space: pre-wrap;">You are a friendly, helpful WordPress security advisor. Your job is to help shop owners understand their site security in simple, non-technical language. Be reassuring and positive. Remember: firewall blocks, failed logins, and login anomalies are GOOD - they mean the plugin is protecting the site. ALWAYS include [SCORE: XX] in your response.</pre>
 
 					<p style="margin: 0 0 10px 0; font-size: 11px; color: #666; font-weight: bold;">
 						USER PROMPT + SECURITY DATA (combined):

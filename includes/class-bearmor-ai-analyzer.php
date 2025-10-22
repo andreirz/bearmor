@@ -72,14 +72,26 @@ class Bearmor_AI_Analyzer {
 	 */
 	private static function call_openai_api( $summary ) {
 		$api_key = BEARMOR_OPENAI_KEY;
+		$is_pro = class_exists( 'Bearmor_License' ) && Bearmor_License::is_pro();
+
+		// Build security settings data
+		$security_settings = "SECURITY SETTINGS:\n";
+		$security_settings .= "- Hardening rules enabled: " . ( get_option( 'bearmor_header_x_frame' ) ? 'Yes' : 'No' ) . " (Security headers, version hiding, user enumeration blocking)\n";
+		$security_settings .= "- 2FA enabled: " . ( get_option( 'bearmor_2fa_enabled' ) ? 'Yes' : 'No' ) . " (Two-factor authentication for login protection)\n";
+		$security_settings .= "- SSL active: " . ( is_ssl() ? 'Yes' : 'No' ) . " (HTTPS encryption for data in transit)\n";
+		$security_settings .= "- Firewall active: " . ( $is_pro ? 'Yes (Pro)' : 'No (Free)' ) . " (Blocks incoming attacks: SQL injection, XSS, brute force, malicious requests - does NOT remove existing malware files)\n";
+		$security_settings .= "\n";
 
 		$prompt = "You are a friendly WordPress security advisor helping a shop owner understand their site's security.\n\n";
-		$prompt .= "CRITICAL: Start your response with [COLOR-RATING: X] where X is GREEN, GRAY, YELLOW, or RED.\n\n";
-		$prompt .= "COLOR RATING RULES:\n";
-		$prompt .= "- GREEN: Everything is great! Your site is secure and the security plugin is working perfectly.\n";
-		$prompt .= "- GRAY: All good. Minor routine activity detected, but nothing to worry about. The plugin has everything under control.\n";
-		$prompt .= "- YELLOW: Some attention needed. There are vulnerabilities to update or malware to clean, but the plugin is helping protect you.\n";
-		$prompt .= "- RED: Urgent action needed. Active malware infections or critical vulnerabilities detected. The plugin is protecting you, but you need to act now.\n\n";
+		
+		// Ask for score for all users
+		if ( $is_pro ) {
+			$prompt .= "Based on the activity logs and patterns below, give 0-50 discretionary points.\n";
+			$prompt .= "Respond with: [SCORE: XX | REASON: brief explanation] where XX is the discretionary score (0-50).\n\n";
+		} else {
+			$prompt .= "Respond with: [SCORE: XX | REASON: brief explanation] where XX is your assessment of security quality (0-50).\n\n";
+		}
+
 		$prompt .= "IMPORTANT - THESE ARE GOOD SIGNS:\n";
 		$prompt .= "- Firewall blocks = Your plugin is protecting you from attacks\n";
 		$prompt .= "- Failed login attempts = Your plugin is blocking hackers trying to break in\n";
@@ -91,12 +103,14 @@ class Bearmor_AI_Analyzer {
 		$prompt .= "3. If real threats exist: explain calmly what to do\n";
 		$prompt .= "4. Action steps (if any) - make them simple and clear\n\n";
 		$prompt .= "TONE & RULES:\n";
-		$prompt .= "- Start with [COLOR-RATING: X]\n";
 		$prompt .= "- Be kind, helpful, and reassuring\n";
 		$prompt .= "- NO emojis\n";
 		$prompt .= "- Use simple language (non-technical)\n";
 		$prompt .= "- Don't stress the client - explain what's being done to protect them\n";
-		$prompt .= "- If action is needed, make it sound manageable\n\n";
+		$prompt .= "- If action is needed, make it sound manageable\n";
+		$prompt .= "- ALWAYS include [SCORE: XX] in your response\n";
+		$prompt .= "\n";
+		$prompt .= $security_settings;
 		$prompt .= "Security Report:\n{$summary}";
 
 		$body = array(
@@ -104,7 +118,7 @@ class Bearmor_AI_Analyzer {
 			'messages'    => array(
 				array(
 					'role'    => 'system',
-					'content' => 'You are a friendly, helpful WordPress security advisor. Your job is to help shop owners understand their site security in simple, non-technical language. Be reassuring and positive. You MUST start every response with [COLOR-RATING: X] where X is GREEN, GRAY, YELLOW, or RED. Remember: firewall blocks, failed logins, and login anomalies are GOOD - they mean the plugin is protecting the site.',
+					'content' => 'You are a friendly, helpful WordPress security advisor. Your job is to help shop owners understand their site security in simple, non-technical language. Be reassuring and positive. Remember: firewall blocks, failed logins, and login anomalies are GOOD - they mean the plugin is protecting the site. ALWAYS include [SCORE: XX] in your response.',
 				),
 				array(
 					'role'    => 'user',
@@ -143,20 +157,29 @@ class Bearmor_AI_Analyzer {
 
 		$content = $data['choices'][0]['message']['content'];
 		
-		// Extract color rating from response (new format: [COLOR-RATING: X])
-		$color = 'gray'; // Default if AI doesn't provide
-		if ( preg_match( '/\[COLOR-RATING:\s*(green|gray|yellow|red)\s*\]/i', $content, $matches ) ) {
-			$color = strtolower( $matches[1] );
-			// Strip the color tag from the response
-			$content = preg_replace( '/\[COLOR-RATING:\s*(green|gray|yellow|red)\s*\]\s*/i', '', $content );
+		// Extract discretionary score and reason
+		$discretionary_score = 0;
+		$reason = '';
+		
+		// Try to match [SCORE: XX | REASON: explanation] format
+		if ( preg_match( '/\[SCORE:\s*(\d+)\s*\|\s*REASON:\s*([^\]]+)\]/i', $content, $matches ) ) {
+			$discretionary_score = (int) $matches[1];
+			$reason = trim( $matches[2] );
+			// Cap at 50
+			$discretionary_score = min( $discretionary_score, 50 );
+		} elseif ( preg_match( '/\[SCORE:\s*(\d+)\s*\]/i', $content, $matches ) ) {
+			// Fallback: just [SCORE: XX]
+			$discretionary_score = (int) $matches[1];
+			$discretionary_score = min( $discretionary_score, 50 );
 		}
 
 		return array(
-			'response'    => trim( $content ), // STRIPPED OF COLOR TAG
-			'color'       => $color,
-			'tokens_used' => isset( $data['usage']['total_tokens'] ) ? $data['usage']['total_tokens'] : 0,
-			'model'       => self::MODEL,
-			'prompt'      => $prompt, // SAVE PROMPT FOR DISPLAY
+			'response'           => trim( $content ),
+			'discretionary_score' => $discretionary_score,
+			'score_reason'       => $reason,
+			'tokens_used'        => isset( $data['usage']['total_tokens'] ) ? $data['usage']['total_tokens'] : 0,
+			'model'              => self::MODEL,
+			'prompt'             => $prompt,
 		);
 	}
 
@@ -172,24 +195,39 @@ class Bearmor_AI_Analyzer {
 		// Delete all old analyses - we only keep the latest one
 		$wpdb->query( "DELETE FROM {$wpdb->prefix}bearmor_ai_analyses" );
 		
-		$result = $wpdb->insert(
-			$wpdb->prefix . 'bearmor_ai_analyses',
-			array(
-				'summary_data' => $summary,
-				'ai_prompt'    => $response['prompt'],
-				'ai_response'  => $response['response'],
-				'color_rating' => isset( $response['color'] ) ? $response['color'] : 'gray',
-				'model_used'   => $response['model'],
-				'tokens_used'  => $response['tokens_used'],
-				'created_at'   => current_time( 'mysql' ),
-			),
-			array( '%s', '%s', '%s', '%s', '%s', '%d', '%s' )
+		// Build insert data - only include columns that exist
+		$insert_data = array(
+			'summary_data' => $summary,
+			'ai_prompt'    => $response['prompt'],
+			'ai_response'  => $response['response'],
+			'model_used'   => $response['model'],
+			'tokens_used'  => $response['tokens_used'],
+			'created_at'   => current_time( 'mysql' ),
 		);
+		
+		$insert_formats = array( '%s', '%s', '%s', '%s', '%d', '%s' );
+		
+		// Add optional columns if they exist
+		$table_name = $wpdb->prefix . 'bearmor_ai_analyses';
+		$columns = $wpdb->get_results( "SHOW COLUMNS FROM {$table_name}" );
+		$column_names = wp_list_pluck( $columns, 'Field' );
+		
+		if ( in_array( 'discretionary_score', $column_names ) ) {
+			$insert_data['discretionary_score'] = isset( $response['discretionary_score'] ) ? $response['discretionary_score'] : 0;
+			$insert_formats[] = '%d';
+		}
+		
+		if ( in_array( 'score_reason', $column_names ) ) {
+			$insert_data['score_reason'] = isset( $response['score_reason'] ) ? $response['score_reason'] : '';
+			$insert_formats[] = '%s';
+		}
+		
+		$result = $wpdb->insert( $table_name, $insert_data, $insert_formats );
 		
 		if ( $result === false ) {
 			error_log( 'Bearmor AI Analysis Save Error: ' . $wpdb->last_error );
 		} else {
-			error_log( 'Bearmor AI Analysis Saved: ID ' . $wpdb->insert_id . ', Color: ' . $response['color'] );
+			error_log( 'Bearmor AI Analysis Saved: ID ' . $wpdb->insert_id );
 		}
 	}
 
