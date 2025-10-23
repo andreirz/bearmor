@@ -69,7 +69,10 @@ if ( ! empty( $uptime_stats['downtime_events'] ) ) {
 }
 ?>
 
-<div class="bearmor-widget bearmor-widget-uptime bearmor-uptime-<?php echo esc_attr( $status_class ); ?>">
+<div class="bearmor-widget bearmor-widget-uptime bearmor-uptime-<?php echo esc_attr( $status_class ); ?> <?php echo ! $is_pro ? 'bearmor-widget-pro' : ''; ?>">
+	<?php if ( ! $is_pro ) : ?>
+		<div class="bearmor-pro-badge">PRO</div>
+	<?php endif; ?>
 	<div class="bearmor-widget-icon">
 		<span class="dashicons dashicons-clock"></span>
 	</div>
