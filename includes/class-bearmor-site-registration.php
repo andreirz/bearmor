@@ -102,18 +102,19 @@ class Bearmor_Site_Registration {
 	/**
 	 * Call home server API
 	 *
-	 * @param string $endpoint Endpoint name (register, verify, uptime)
-	 * @param array  $payload Data to send
+	 * @param string $endpoint Endpoint name (register, verify, uptime/site_id)
+	 * @param array  $payload Data to send (for POST requests)
+	 * @param string $method HTTP method (POST or GET)
 	 * @return array|WP_Error Response or error
 	 */
-	public static function call_home( $endpoint, $payload = array() ) {
+	public static function call_home( $endpoint, $payload = array(), $method = 'POST' ) {
 		$url = self::CALL_HOME_URL . '/index.php?rest_route=/bearmor-home/v1/' . $endpoint;
 
-		error_log( 'BEARMOR: Calling home - URL: ' . $url );
+		error_log( 'BEARMOR: Calling home - URL: ' . $url . ' Method: ' . $method );
 		error_log( 'BEARMOR: Payload: ' . wp_json_encode( $payload ) );
 
 		$args = array(
-			'method'      => 'POST',
+			'method'      => $method,
 			'timeout'     => 10,
 			'redirection' => 5,
 			'httpversion' => '1.0',
@@ -122,10 +123,13 @@ class Bearmor_Site_Registration {
 				'Content-Type' => 'application/json',
 				'User-Agent'   => 'Bearmor-Security/' . BEARMOR_VERSION,
 			),
-			'body'        => wp_json_encode( $payload ),
 		);
 
-		$response = wp_remote_post( $url, $args );
+		if ( 'POST' === $method ) {
+			$args['body'] = wp_json_encode( $payload );
+		}
+
+		$response = wp_remote_request( $url, $args );
 
 		if ( is_wp_error( $response ) ) {
 			error_log( 'BEARMOR: Call-home error: ' . $response->get_error_message() );

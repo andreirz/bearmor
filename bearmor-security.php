@@ -29,6 +29,7 @@ require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-site-registration.php'
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-license.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-callhome.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-placeholder.php';
+require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-uptime-sync.php';
 
 /**
  * Plugin activation
@@ -293,6 +294,19 @@ function bearmor_activate() {
 		created_at DATETIME NOT NULL,
 		KEY idx_created_at (created_at),
 		KEY idx_color_rating (color_rating)
+	) $charset_collate;";
+	dbDelta( $sql );
+
+	// Uptime history table (stores downtime periods from Home)
+	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_uptime_history (
+		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+		start_time DATETIME NOT NULL,
+		end_time DATETIME,
+		duration_minutes INT,
+		status VARCHAR(50) DEFAULT 'open',
+		synced_at DATETIME NOT NULL,
+		KEY idx_start_time (start_time),
+		KEY idx_status (status)
 	) $charset_collate;";
 	dbDelta( $sql );
 	

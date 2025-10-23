@@ -63,6 +63,17 @@ if ( isset( $_POST['bearmor_apply_hardening'] ) && check_admin_referer( 'bearmor
 	echo '<div class="notice notice-success"><p>Recommended hardening will be applied in future updates.</p></div>';
 }
 
+// Manual uptime sync
+if ( isset( $_POST['bearmor_sync_uptime'] ) && check_admin_referer( 'bearmor_settings' ) ) {
+	if ( class_exists( 'Bearmor_Uptime_Sync' ) ) {
+		Bearmor_Uptime_Sync::sync_uptime_data();
+		echo '<div class="notice notice-success"><p>Uptime data synced from Home server!</p></div>';
+	} else {
+		echo '<div class="notice notice-error"><p>Uptime sync class not found.</p></div>';
+	}
+}
+
+
 $settings = get_option( 'bearmor_settings', array() );
 $license_info = Bearmor_License::get_info();
 $site_id = get_option( 'bearmor_site_id' );
@@ -340,6 +351,7 @@ if ( $last_verified ) {
 		<p>
 			<button type="submit" name="bearmor_save_settings" class="button button-primary">Save & Apply</button>
 			<button type="submit" name="bearmor_apply_hardening" class="button button-secondary" style="margin-left: 10px;">Apply Recommended Hardening</button>
+			<button type="submit" name="bearmor_sync_uptime" class="button button-secondary" style="margin-left: 10px;">🔄 Sync Uptime Data</button>
 		</p>
 	</form>
 </div>

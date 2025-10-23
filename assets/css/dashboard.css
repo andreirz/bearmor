@@ -474,6 +474,66 @@
 	margin-top: -20px;
 }
 
+/* ===========================
+   Uptime Widget
+   =========================== */
+
+.bearmor-widget-uptime {
+	position: relative;
+	overflow: visible;
+	z-index: 1;
+}
+
+.bearmor-widget-uptime .bearmor-widget-content {
+	overflow: visible;
+}
+
+.bearmor-widget-uptime .apexcharts-tooltip {
+	z-index: 9999 !important;
+}
+
+
+
+.bearmor-uptime-good {
+	border-left: 4px solid #2196F3;
+}
+
+.bearmor-uptime-warning {
+	border-left: 4px solid #FF9800;
+}
+
+.bearmor-uptime-critical {
+	border-left: 4px solid #F44336;
+}
+
+.bearmor-uptime-stats {
+	margin-bottom: 12px;
+}
+
+.bearmor-uptime-percentage {
+	font-size: 22px;
+	font-weight: 700;
+	margin: 0;
+	padding: 0;
+	line-height: 1;
+}
+
+.bearmor-uptime-percentage.bearmor-uptime-excellent {
+	color: #4CAF50;
+}
+
+.bearmor-uptime-percentage.bearmor-uptime-good {
+	color: #2196F3;
+}
+
+.bearmor-uptime-percentage.bearmor-uptime-warning {
+	color: #FF9800;
+}
+
+.bearmor-uptime-percentage.bearmor-uptime-critical {
+	color: #F44336;
+}
+
 .bearmor-ai-report {
 
 	padding: 20px;
@@ -590,4 +650,11 @@
 	.bearmor-ai-report {
 		padding: 16px;
 	}
+}
+
+.bearmor-uptime-chart
+{
+	margin-top: -25px !important;
+	margin-bottom: -40px;
+	max-width: 100% !important;
 }
