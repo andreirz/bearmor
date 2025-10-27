@@ -54,9 +54,21 @@
 
 .bearmor-top-row {
 	display: grid;
-	grid-template-columns: 2fr 1fr 3fr;
-	gap: 20px;
+	grid-template-columns: repeat(6, 1fr);
+	gap: 16px;
 	margin-bottom: 24px;
+}
+
+.bearmor-top-row > :nth-child(1) {
+	grid-column: span 2;
+}
+
+.bearmor-top-row > :nth-child(2) {
+	grid-column: span 1;
+}
+
+.bearmor-top-row > :nth-child(3) {
+	grid-column: span 3;
 }
 
 /* ===========================
@@ -143,7 +155,7 @@
 
 .bearmor-widgets-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	grid-template-columns: repeat(6, 1fr);
 	gap: 16px;
 	margin-bottom: 24px;
 }
@@ -480,12 +492,12 @@
 
 .bearmor-widget-uptime {
 	position: relative;
-	overflow: visible;
+	overflow: hidden;
 	z-index: 1;
 }
 
 .bearmor-widget-uptime .bearmor-widget-content {
-	overflow: visible;
+	overflow: hidden;
 }
 
 .bearmor-widget-uptime .apexcharts-tooltip {
