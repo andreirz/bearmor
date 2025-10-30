@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Bearmor_Site_Registration {
 
-	const CALL_HOME_URL = 'http://bearmorhome.local';
+	const CALL_HOME_URL = 'https://bearmor.eu';
 	const CALL_HOME_ENDPOINT = '/wp-json/bearmor-home/v1/register';
 
 	/**
