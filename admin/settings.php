@@ -151,6 +151,61 @@ if ( $last_verified ) {
 		</div>
 	</div>
 	
+	<!-- Scheduled Tasks Info -->
+	<div style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 20px; margin-bottom: 20px; max-width: 600px;">
+		<h3 style="margin-top: 0; font-size: 16px;">📅 Scheduled Tasks (WP Cron)</h3>
+		<p style="margin: 0 0 15px 0; font-size: 13px; color: #666;">
+			<strong>Note:</strong> WordPress Cron runs when someone visits your site. For guaranteed execution, set up a real server cron job.
+		</p>
+		<table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+			<tr style="border-bottom: 1px solid #ddd;">
+				<td style="padding: 8px 0; font-weight: 600;">Task</td>
+				<td style="padding: 8px 0; font-weight: 600;">Schedule</td>
+				<td style="padding: 8px 0; font-weight: 600;">Next Run</td>
+			</tr>
+			<?php
+			$cron_tasks = array(
+				'bearmor_daily_malware_scan' => 'Malware Scan',
+				'bearmor_daily_vulnerability_scan' => 'Vulnerability Scan',
+				'bearmor_weekly_deep_scan' => 'Deep Scan',
+				'bearmor_daily_callhome' => 'License Check',
+				'bearmor_hourly_uptime_sync' => 'Uptime Sync',
+				'bearmor_cleanup_expired_blocks' => 'Cleanup Blocks',
+				'bearmor_cleanup_activity_log' => 'Cleanup Activity Log',
+			);
+			
+			foreach ( $cron_tasks as $hook => $label ) {
+				$next_run = wp_next_scheduled( $hook );
+				$schedule = 'Not scheduled';
+				
+				if ( $next_run ) {
+					$crons = _get_cron_array();
+					foreach ( $crons as $timestamp => $cron ) {
+						if ( isset( $cron[ $hook ] ) ) {
+							$schedule_name = reset( $cron[ $hook ] )['schedule'] ?? 'once';
+							$schedule = ucfirst( $schedule_name );
+							break;
+						}
+					}
+					$next_run_time = date( 'Y-m-d H:i:s', $next_run ) . ' (server time)';
+				} else {
+					$next_run_time = '<span style="color: #999;">Not scheduled</span>';
+				}
+				
+				echo '<tr style="border-bottom: 1px solid #eee;">';
+				echo '<td style="padding: 8px 0;">' . esc_html( $label ) . '</td>';
+				echo '<td style="padding: 8px 0;">' . esc_html( $schedule ) . '</td>';
+				echo '<td style="padding: 8px 0;">' . $next_run_time . '</td>';
+				echo '</tr>';
+			}
+			?>
+		</table>
+		<p style="margin: 15px 0 0 0; font-size: 12px; color: #666;">
+			<strong>Server Time:</strong> <?php echo date( 'Y-m-d H:i:s' ); ?> | 
+			<a href="https://developer.wordpress.org/plugins/cron/" target="_blank">Learn about WP Cron</a>
+		</p>
+	</div>
+	
 	<form method="post">
 		<?php wp_nonce_field( 'bearmor_settings' ); ?>
 		
