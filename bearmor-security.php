@@ -3,7 +3,7 @@
  * Plugin Name: Bearmor Security
  * Plugin URI: https://bearmor.com
  * Description: Lightweight, robust WordPress security plugin for SMBs.
- * Version: 0.1.9
+ * Version: 0.2.0
  * Author: Bearmor Security Team
  * Author URI: https://bearmor.com
  * License: GPL v2 or later
@@ -361,6 +361,11 @@ function bearmor_activate() {
 	// Trigger activation hook for call-home and scheduling
 	error_log( 'BEARMOR: Firing bearmor_plugin_activated hook' );
 	do_action( 'bearmor_plugin_activated' );
+	
+	// Schedule scans based on default settings
+	if ( class_exists( 'Bearmor_Scan_Scheduler' ) ) {
+		Bearmor_Scan_Scheduler::schedule_scans();
+	}
 	
 	// Registration will happen on first call-home (daily via WP Cron)
 	error_log( 'BEARMOR: Activation complete. Daily call-home scheduled.' );

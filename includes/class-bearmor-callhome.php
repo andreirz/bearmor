@@ -38,8 +38,10 @@ class Bearmor_CallHome {
 		
 		// Only schedule if not already scheduled
 		if ( ! wp_next_scheduled( self::HOOK_NAME ) ) {
-			wp_schedule_event( time(), 'daily', self::HOOK_NAME );
-			error_log( 'BEARMOR: Daily call-home scheduled' );
+			// Schedule for 1 AM (low traffic hours)
+			$time = strtotime( 'tomorrow 01:00:00' );
+			wp_schedule_event( $time, 'daily', self::HOOK_NAME );
+			error_log( 'BEARMOR: Daily call-home scheduled for 1 AM' );
 		}
 	}
 

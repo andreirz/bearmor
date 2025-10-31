@@ -30,22 +30,18 @@ class Bearmor_Scan_Scheduler {
 	 */
 	public static function schedule_scans() {
 		// Get settings
-		$malware_enabled = get_option( 'bearmor_malware_scan_enabled', true );
-		$deep_scan_enabled = get_option( 'bearmor_deep_scan_enabled', false );
-
-		// Schedule malware scan (daily at 2 AM)
-		if ( $malware_enabled && ! wp_next_scheduled( 'bearmor_daily_malware_scan' ) ) {
-			$time = strtotime( '02:00:00' );
+		$settings = get_option( 'bearmor_settings', array() );
+		$scan_schedule = isset( $settings['scan_schedule'] ) ? $settings['scan_schedule'] : 'daily';
+		
+		// Schedule malware scan if daily is enabled
+		if ( $scan_schedule === 'daily' && ! wp_next_scheduled( 'bearmor_daily_malware_scan' ) ) {
+			// Schedule for 3 AM (low traffic hours)
+			$time = strtotime( 'tomorrow 03:00:00' );
 			wp_schedule_event( $time, 'daily', 'bearmor_daily_malware_scan' );
-			error_log( 'BEARMOR: Scheduled daily malware scan at 2 AM' );
+			error_log( 'BEARMOR: Scheduled daily malware scan at 3 AM' );
 		}
 
-		// Schedule deep scan (weekly on Sunday at 3 AM)
-		if ( $deep_scan_enabled && ! wp_next_scheduled( 'bearmor_weekly_deep_scan' ) ) {
-			$time = strtotime( 'next Sunday 03:00:00' );
-			wp_schedule_event( $time, 'weekly', 'bearmor_weekly_deep_scan' );
-			error_log( 'BEARMOR: Scheduled weekly deep scan on Sunday at 3 AM' );
-		}
+		// Deep scan is always manual-only (no auto-scheduling)
 	}
 
 	/**
