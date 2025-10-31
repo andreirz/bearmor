@@ -24,6 +24,19 @@ define( 'BEARMOR_PLUGIN_FILE', __FILE__ );
 define( 'BEARMOR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BEARMOR_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
+// Load Plugin Update Checker
+require BEARMOR_PLUGIN_DIR . 'plugin-update-checker/plugin-update-checker.php';
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+
+$bearmor_update_checker = PucFactory::buildUpdateChecker(
+	'https://github.com/andreirz/bearmor/',
+	__FILE__,
+	'bearmor-security'
+);
+
+// Set the branch that contains the stable release
+$bearmor_update_checker->setBranch('main');
+
 // Load registration classes (will be used for call-home)
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-site-registration.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-license.php';
