@@ -19,41 +19,54 @@ $license_info = Bearmor_License::get_info();
 $is_pro = Bearmor_License::is_pro();
 $plan = $license_info['plan'];
 $expires = $license_info['expires'];
-
 // Enqueue dashboard styles
 wp_enqueue_style( 'bearmor-dashboard', BEARMOR_PLUGIN_URL . 'assets/css/dashboard.css', array(), BEARMOR_VERSION );
 ?>
 
 <div class="wrap bearmor-dashboard">
-	<div class="bearmor-header" style="display: flex; justify-content: space-between; align-items: center;">
-		<h1 style="margin: 0;">
-			<span class="dashicons dashicons-shield" style="color: #8269FF;"></span>
-			Bearmor Security
-		</h1>
-		
-		<!-- Plan Badge -->
-		<div style="display: flex; align-items: center; gap: 10px;">
-			<?php
-			$badge_color = $is_pro ? '#8269FF' : '#999';
-			$badge_text = $is_pro ? 'PRO' : 'FREE';
-			$badge_title = $is_pro && $expires ? 'Expires: ' . esc_attr( $expires ) : 'Free tier';
-			?>
-			<div style="
-				background: <?php echo esc_attr( $badge_color ); ?>;
-				color: white;
-				padding: 6px 12px;
-				border-radius: 20px;
-				font-size: 12px;
-				font-weight: 600;
-				cursor: help;
-				title: '<?php echo esc_attr( $badge_title ); ?>'
-			" title="<?php echo esc_attr( $badge_title ); ?>">
-				<?php echo esc_html( $badge_text ); ?>
+	<div class="bearmor-header" style="display: block; margin-bottom: 20px;">
+		<div style="display: flex; justify-content: space-between; align-items: center;">
+			<h1 style="margin: 0;">
+				<span class="dashicons dashicons-shield" style="color: #8269FF;"></span>
+				Bearmor Security
+			</h1>
+			
+			<!-- Plan Badge -->
+			<div style="display: flex; align-items: center; gap: 10px;">
+				<?php
+				$is_pro = class_exists( 'Bearmor_License' ) && Bearmor_License::is_pro();
+				if ( $is_pro ) :
+					?>
+					<div style="
+						background: linear-gradient(135deg, #8269FF 0%, #6B52E8 100%);
+						color: white;
+						padding: 6px 12px;
+						border-radius: 20px;
+						font-size: 12px;
+						font-weight: 600;
+						cursor: help;
+						title: 'Pro features enabled'
+					" title="Pro features enabled">
+						PRO
+					</div>
+				<?php else : ?>
+					<div style="
+						background: #999;
+						color: white;
+						padding: 6px 12px;
+						border-radius: 20px;
+						font-size: 12px;
+						font-weight: 600;
+						cursor: help;
+						title: 'Free tier'
+					" title="Free tier">
+						FREE
+					</div>
+				<?php endif; ?>
 			</div>
 		</div>
 	</div>
 
-	<!-- Top Row: Quick Actions + Score + AI Summary -->
 	<div class="bearmor-top-row">
 		<!-- Quick Actions - Left (1/3) -->
 		<div class="bearmor-quick-actions">
