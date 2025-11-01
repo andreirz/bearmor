@@ -3,7 +3,7 @@
  * Plugin Name: Bearmor Security
  * Plugin URI: https://bearmor.com
  * Description: Lightweight, robust WordPress security plugin for SMBs.
- * Version: 0.2.2
+ * Version: 0.2.3
  * Author: Bearmor Security Team
  * Author URI: https://bearmor.com
  * License: GPL v2 or later
@@ -77,7 +77,7 @@ function bearmor_activate() {
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
 	// File checksums table
-	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_file_checksums (
+	$sql = "CREATE TABLE {$wpdb->prefix}bearmor_file_checksums (
 		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 		file_path VARCHAR(500) NOT NULL,
 		checksum VARCHAR(64) NOT NULL,
@@ -91,7 +91,7 @@ function bearmor_activate() {
 	dbDelta( $sql );
 
 	// File changes table
-	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_file_changes (
+	$sql = "CREATE TABLE {$wpdb->prefix}bearmor_file_changes (
 		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 		file_path VARCHAR(500) NOT NULL,
 		old_checksum VARCHAR(64),
@@ -105,7 +105,7 @@ function bearmor_activate() {
 	dbDelta( $sql );
 
 	// Quarantine table
-	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_quarantine (
+	$sql = "CREATE TABLE {$wpdb->prefix}bearmor_quarantine (
 		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 		file_path VARCHAR(500) NOT NULL,
 		quarantined_path VARCHAR(500) NOT NULL,
@@ -121,7 +121,7 @@ function bearmor_activate() {
 	dbDelta( $sql );
 
 	// Malware detections table
-	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_malware_detections (
+	$sql = "CREATE TABLE {$wpdb->prefix}bearmor_malware_detections (
 		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 		file_path VARCHAR(500) NOT NULL,
 		pattern_id VARCHAR(100) NOT NULL,
@@ -150,7 +150,7 @@ function bearmor_activate() {
 	}
 
 	// Login attempts table
-	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_login_attempts (
+	$sql = "CREATE TABLE {$wpdb->prefix}bearmor_login_attempts (
 		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 		ip_address VARCHAR(45) NOT NULL,
 		username VARCHAR(60),
@@ -165,7 +165,7 @@ function bearmor_activate() {
 	dbDelta( $sql );
 
 	// Blocked IPs table
-	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_blocked_ips (
+	$sql = "CREATE TABLE {$wpdb->prefix}bearmor_blocked_ips (
 		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 		ip_address VARCHAR(45) NOT NULL UNIQUE,
 		blocked_at DATETIME NOT NULL,
@@ -179,7 +179,7 @@ function bearmor_activate() {
 	dbDelta( $sql );
 
 	// Login anomalies table
-	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_login_anomalies (
+	$sql = "CREATE TABLE {$wpdb->prefix}bearmor_login_anomalies (
 		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 		user_id BIGINT UNSIGNED NOT NULL,
 		ip_address VARCHAR(45) NOT NULL,
@@ -199,7 +199,7 @@ function bearmor_activate() {
 	dbDelta( $sql );
 
 	// User profiles table (for tracking normal behavior)
-	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_user_profiles (
+	$sql = "CREATE TABLE {$wpdb->prefix}bearmor_user_profiles (
 		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 		user_id BIGINT UNSIGNED NOT NULL,
 		known_ips TEXT,
@@ -217,7 +217,7 @@ function bearmor_activate() {
 	dbDelta( $sql );
 
 	// Activity log table
-	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_activity_log (
+	$sql = "CREATE TABLE {$wpdb->prefix}bearmor_activity_log (
 		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 		user_id BIGINT UNSIGNED NOT NULL,
 		username VARCHAR(60) NOT NULL,
@@ -234,7 +234,7 @@ function bearmor_activate() {
 	dbDelta( $sql );
 
 	// Vulnerabilities table
-	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_vulnerabilities (
+	$sql = "CREATE TABLE {$wpdb->prefix}bearmor_vulnerabilities (
 		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 		item_slug VARCHAR(255) NOT NULL,
 		item_name VARCHAR(255) NOT NULL,
@@ -255,7 +255,7 @@ function bearmor_activate() {
 	dbDelta( $sql );
 
 	// Firewall tables
-	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_firewall_blocks (
+	$sql = "CREATE TABLE {$wpdb->prefix}bearmor_firewall_blocks (
 		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 		ip_address VARCHAR(45) NOT NULL,
 		request_uri TEXT NOT NULL,
@@ -269,7 +269,7 @@ function bearmor_activate() {
 	dbDelta( $sql );
 
 	// Deep scan results table
-	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_deep_scan_results (
+	$sql = "CREATE TABLE {$wpdb->prefix}bearmor_deep_scan_results (
 		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 		scan_type ENUM('database', 'uploads') NOT NULL,
 		item_type VARCHAR(50) NOT NULL,
@@ -286,7 +286,7 @@ function bearmor_activate() {
 	) $charset_collate;";
 	dbDelta( $sql );
 
-	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_firewall_whitelist (
+	$sql = "CREATE TABLE {$wpdb->prefix}bearmor_firewall_whitelist (
 		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 		whitelist_type ENUM('ip', 'uri') NOT NULL,
 		value VARCHAR(500) NOT NULL,
@@ -296,7 +296,7 @@ function bearmor_activate() {
 	dbDelta( $sql );
 
 	// AI Analyses table
-	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_ai_analyses (
+	$sql = "CREATE TABLE {$wpdb->prefix}bearmor_ai_analyses (
 		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 		summary_data LONGTEXT NOT NULL,
 		ai_prompt LONGTEXT NOT NULL,
@@ -311,7 +311,7 @@ function bearmor_activate() {
 	dbDelta( $sql );
 
 	// Uptime history table (stores downtime periods from Home)
-	$sql = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}bearmor_uptime_history (
+	$sql = "CREATE TABLE {$wpdb->prefix}bearmor_uptime_history (
 		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 		start_time DATETIME NOT NULL,
 		end_time DATETIME,
@@ -430,7 +430,7 @@ Bearmor_Vulnerability_Scanner::init();
 function bearmor_baseline_scan_notice() {
 	if ( get_option( 'bearmor_show_baseline_notice' ) && current_user_can( 'manage_options' ) ) {
 		?>
-		<div class="notice notice-warning is-dismissible" style="clear: both; display: block;">
+		<div class="notice notice-warning is-dismissible" style="clear: both; display: block; width: 100%; float: none;">
 			<p>
 				<strong>Bearmor Security:</strong> Please run a baseline scan to start monitoring file changes.
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-file-changes' ) ); ?>" class="button button-primary" style="margin-left: 10px;">
