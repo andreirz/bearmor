@@ -3,7 +3,7 @@
  * Plugin Name: Bearmor Security
  * Plugin URI: https://bearmor.com
  * Description: Lightweight, robust WordPress security plugin for SMBs.
- * Version: 0.4.0
+ * Version: 0.4.1
  * Author: Bearmor Security Team
  * Author URI: https://bearmor.com
  * License: GPL v2 or later
@@ -750,6 +750,20 @@ function bearmor_admin_menu() {
 	);
 }
 add_action( 'admin_menu', 'bearmor_admin_menu' );
+
+/**
+ * Hide admin notices on Bearmor pages
+ */
+function bearmor_hide_admin_notices() {
+	$screen = get_current_screen();
+	
+	// Check if we're on a Bearmor page
+	if ( $screen && strpos( $screen->id, 'bearmor' ) !== false ) {
+		remove_all_actions( 'admin_notices' );
+		remove_all_actions( 'all_admin_notices' );
+	}
+}
+add_action( 'admin_head', 'bearmor_hide_admin_notices', 1 );
 
 /**
  * Dashboard page
