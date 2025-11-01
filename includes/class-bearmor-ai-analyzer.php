@@ -31,10 +31,11 @@ class Bearmor_AI_Analyzer {
 	public static function analyze( $days = 7 ) {
 		error_log( 'BEARMOR AI: analyze() called' );
 		
-		// Check if API key is defined
-		if ( ! defined( 'BEARMOR_OPENAI_KEY' ) || empty( BEARMOR_OPENAI_KEY ) ) {
-			error_log( 'BEARMOR AI: No API key configured' );
-			return new WP_Error( 'no_api_key', 'OpenAI API key not configured' );
+		// Check if PRO
+		$is_pro = class_exists( 'Bearmor_License' ) && Bearmor_License::is_pro();
+		if ( ! $is_pro ) {
+			error_log( 'BEARMOR AI: PRO license required' );
+			return new WP_Error( 'pro_required', 'AI Analysis is a PRO feature' );
 		}
 
 		error_log( 'BEARMOR AI: Building summary...' );
@@ -44,16 +45,16 @@ class Bearmor_AI_Analyzer {
 		
 		error_log( 'BEARMOR AI: Summary built, length: ' . strlen( $summary ) );
 
-		// Call OpenAI API
-		error_log( 'BEARMOR AI: Calling OpenAI API...' );
-		$response = self::call_openai_api( $summary );
+		// Call bearmor-home API (proxies to OpenAI)
+		error_log( 'BEARMOR AI: Calling bearmor-home AI endpoint...' );
+		$response = self::call_home_ai_api( $summary );
 
 		if ( is_wp_error( $response ) ) {
 			error_log( 'BEARMOR AI: API error: ' . $response->get_error_message() );
 			return $response;
 		}
 
-		error_log( 'BEARMOR AI: API response received, color: ' . $response['color'] );
+		error_log( 'BEARMOR AI: API response received' );
 
 		// Save to database
 		error_log( 'BEARMOR AI: Saving to database...' );
@@ -65,12 +66,90 @@ class Bearmor_AI_Analyzer {
 	}
 
 	/**
-	 * Call OpenAI API
+	 * Call bearmor-home AI API (proxies to OpenAI)
 	 *
 	 * @param string $summary Security summary
 	 * @return array|WP_Error API response or error
 	 */
-	private static function call_openai_api( $summary ) {
+	private static function call_home_ai_api( $summary ) {
+		// Get site ID and home URL
+		$site_id = get_option( 'bearmor_site_id' );
+		$home_url = defined( 'BEARMOR_HOME_URL' ) ? BEARMOR_HOME_URL : 'https://bearmorhome.local';
+		
+		if ( empty( $site_id ) ) {
+			return new WP_Error( 'no_site_id', 'Site ID not found' );
+		}
+
+		// Call bearmor-home AI endpoint
+		$response = wp_remote_post( $home_url . '/wp-json/bearmor-home/v1/ai-analyze', array(
+			'headers' => array(
+				'Content-Type' => 'application/json',
+			),
+			'body'    => wp_json_encode( array(
+				'site_id'      => $site_id,
+				'summary_data' => $summary,
+			) ),
+			'timeout' => 30,
+		) );
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = wp_remote_retrieve_body( $response );
+		$data        = json_decode( $body, true );
+
+		if ( $status_code === 403 && isset( $data['pro_required'] ) ) {
+			return new WP_Error( 'pro_required', $data['message'] );
+		}
+
+		if ( $status_code !== 200 ) {
+			$error_message = isset( $data['message'] ) ? $data['message'] : 'Unknown API error';
+			return new WP_Error( 'api_error', $error_message, array( 'status' => $status_code ) );
+		}
+
+		if ( ! isset( $data['ai_response'] ) ) {
+			return new WP_Error( 'invalid_response', 'Invalid API response format' );
+		}
+
+		$content = $data['ai_response'];
+		
+		// Extract discretionary score and reason
+		$discretionary_score = 0;
+		$reason = '';
+		
+		// Try to match [SCORE: XX | REASON: explanation] format
+		if ( preg_match( '/\[SCORE:\s*(\d+)\s*\|\s*REASON:\s*([^\]]+)\]/i', $content, $matches ) ) {
+			$discretionary_score = (int) $matches[1];
+			$reason = trim( $matches[2] );
+			// Cap at 50
+			$discretionary_score = min( $discretionary_score, 50 );
+		} elseif ( preg_match( '/\[SCORE:\s*(\d+)\s*\]/i', $content, $matches ) ) {
+			// Fallback: just [SCORE: XX]
+			$discretionary_score = (int) $matches[1];
+			$discretionary_score = min( $discretionary_score, 50 );
+		}
+
+		return array(
+			'response'            => trim( $content ),
+			'discretionary_score' => $discretionary_score,
+			'score_reason'        => $reason,
+			'tokens_used'         => isset( $data['tokens_used'] ) ? $data['tokens_used'] : 0,
+			'model'               => isset( $data['model_used'] ) ? $data['model_used'] : 'gpt-4o-mini',
+			'prompt'              => $summary, // Store summary as prompt
+			'color'               => isset( $data['color_rating'] ) ? $data['color_rating'] : 'gray',
+		);
+	}
+
+	/**
+	 * OLD METHOD - DEPRECATED - Call OpenAI API directly
+	 * Kept for reference, not used anymore
+	 *
+	 * @param string $summary Security summary
+	 * @return array|WP_Error API response or error
+	 */
+	private static function call_openai_api_OLD( $summary ) {
 		$api_key = BEARMOR_OPENAI_KEY;
 		$is_pro = class_exists( 'Bearmor_License' ) && Bearmor_License::is_pro();
 
