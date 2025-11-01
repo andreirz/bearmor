@@ -3,7 +3,7 @@
  * Plugin Name: Bearmor Security
  * Plugin URI: https://bearmor.com
  * Description: Lightweight, robust WordPress security plugin for SMBs.
- * Version: 0.4.1
+ * Version: 0.4.2
  * Author: Bearmor Security Team
  * Author URI: https://bearmor.com
  * License: GPL v2 or later
@@ -349,13 +349,13 @@ function bearmor_activate() {
 		file_put_contents( $quarantine_dir . '/index.php', '<?php // Silence is golden' );
 	}
 
-	// Show baseline scan notice only on FIRST activation
-	if ( ! get_option( 'bearmor_first_activation_done' ) ) {
-		// Mark first activation
-		add_option( 'bearmor_first_activation_done', true );
-		
-		// Show admin notice to run baseline scan
-		add_option( 'bearmor_show_baseline_notice', true );
+	// Auto-schedule baseline scan if not done yet
+	if ( ! get_option( 'bearmor_baseline_hash' ) ) {
+		// Schedule baseline scan 5 minutes after activation
+		if ( ! wp_next_scheduled( 'bearmor_initial_baseline_scan' ) ) {
+			wp_schedule_single_event( time() + 300, 'bearmor_initial_baseline_scan' );
+			error_log( 'BEARMOR: Baseline scan scheduled for 5 minutes from now' );
+		}
 	}
 
 	// Trigger activation hook for call-home and scheduling
@@ -425,10 +425,30 @@ Bearmor_Activity_Log::init();
 Bearmor_Vulnerability_Scanner::init();
 
 /**
- * Show notice to run baseline scan
+ * Auto-run baseline scan (scheduled via WP Cron)
+ */
+function bearmor_run_initial_baseline_scan() {
+	error_log( 'BEARMOR: Running automatic baseline scan...' );
+	
+	// Check if already done
+	if ( get_option( 'bearmor_baseline_hash' ) ) {
+		error_log( 'BEARMOR: Baseline already exists, skipping' );
+		return;
+	}
+	
+	// Run the scan
+	$results = Bearmor_File_Scanner::run_baseline_scan();
+	
+	error_log( 'BEARMOR: Baseline scan complete - Scanned: ' . $results['scanned'] . ', Stored: ' . $results['stored'] );
+}
+add_action( 'bearmor_initial_baseline_scan', 'bearmor_run_initial_baseline_scan' );
+
+/**
+ * Show notice to run baseline scan (only if auto-scan failed)
  */
 function bearmor_baseline_scan_notice() {
-	if ( get_option( 'bearmor_show_baseline_notice' ) && current_user_can( 'manage_options' ) ) {
+	// Only show if baseline doesn't exist and no scan is scheduled
+	if ( ! get_option( 'bearmor_baseline_hash' ) && ! wp_next_scheduled( 'bearmor_initial_baseline_scan' ) && current_user_can( 'manage_options' ) ) {
 		?>
 		<div class="notice notice-warning is-dismissible" style="clear: both; display: block; width: 100%; float: none;">
 			<p>
@@ -442,16 +462,6 @@ function bearmor_baseline_scan_notice() {
 	}
 }
 add_action( 'admin_notices', 'bearmor_baseline_scan_notice' );
-
-/**
- * Dismiss baseline scan notice after scan is run
- */
-add_action( 'admin_init', function() {
-	if ( isset( $_POST['bearmor_scan'] ) && $_POST['bearmor_scan'] === 'baseline' ) {
-		delete_option( 'bearmor_show_baseline_notice' );
-		update_option( 'bearmor_baseline_scan_done', true );
-	}
-} );
 
 /**
  * Log WordPress core updates
