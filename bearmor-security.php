@@ -3,7 +3,7 @@
  * Plugin Name: Bearmor Security
  * Plugin URI: https://bearmor.com
  * Description: Lightweight, robust WordPress security plugin for SMBs.
- * Version: 0.2.1
+ * Version: 0.2.2
  * Author: Bearmor Security Team
  * Author URI: https://bearmor.com
  * License: GPL v2 or later
@@ -362,13 +362,12 @@ function bearmor_activate() {
 	error_log( 'BEARMOR: Firing bearmor_plugin_activated hook' );
 	do_action( 'bearmor_plugin_activated' );
 	
-	// Schedule scans based on default settings
-	if ( class_exists( 'Bearmor_Scan_Scheduler' ) ) {
-		Bearmor_Scan_Scheduler::schedule_scans();
-	}
+	// Load scan scheduler and schedule scans based on default settings
+	require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-scan-scheduler.php';
+	Bearmor_Scan_Scheduler::schedule_scans();
 	
 	// Registration will happen on first call-home (daily via WP Cron)
-	error_log( 'BEARMOR: Activation complete. Daily call-home scheduled.' );
+	error_log( 'BEARMOR: Activation complete. Daily call-home and scans scheduled.' );
 }
 register_activation_hook( __FILE__, 'bearmor_activate' );
 
@@ -431,7 +430,7 @@ Bearmor_Vulnerability_Scanner::init();
 function bearmor_baseline_scan_notice() {
 	if ( get_option( 'bearmor_show_baseline_notice' ) && current_user_can( 'manage_options' ) ) {
 		?>
-		<div class="notice notice-warning is-dismissible">
+		<div class="notice notice-warning is-dismissible" style="clear: both; display: block;">
 			<p>
 				<strong>Bearmor Security:</strong> Please run a baseline scan to start monitoring file changes.
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-file-changes' ) ); ?>" class="button button-primary" style="margin-left: 10px;">
