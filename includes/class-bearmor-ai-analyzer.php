@@ -74,7 +74,7 @@ class Bearmor_AI_Analyzer {
 	private static function call_home_ai_api( $summary ) {
 		// Get site ID and home URL
 		$site_id = get_option( 'bearmor_site_id' );
-		$home_url = defined( 'BEARMOR_HOME_URL' ) ? BEARMOR_HOME_URL : 'https://bearmorhome.local';
+		$home_url = defined( 'BEARMOR_HOME_URL' ) ? BEARMOR_HOME_URL : 'https://bearmor.eu';
 		
 		if ( empty( $site_id ) ) {
 			return new WP_Error( 'no_site_id', 'Site ID not found' );
