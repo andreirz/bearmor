@@ -80,14 +80,28 @@ class Bearmor_AI_Analyzer {
 			return new WP_Error( 'no_site_id', 'Site ID not found' );
 		}
 
+		// Build the full prompt with instructions
+		$is_pro = class_exists( 'Bearmor_License' ) && Bearmor_License::is_pro();
+		
+		$system_message = "You are a friendly, helpful WordPress security advisor. Your job is to help shop owners understand their site security in simple, non-technical language. Be reassuring and positive. Remember: firewall blocks, failed logins, and login anomalies are GOOD - they mean the plugin is protecting the site. ALWAYS include [SCORE: XX] in your response.";
+		
+		$user_prompt = "Based on the security data below, provide a brief assessment (max 150 words).\n\n";
+		$user_prompt .= "IMPORTANT: Include [SCORE: XX] where XX is 0-50 points based on:\n";
+		$user_prompt .= "- Malware/threats = major deduction\n";
+		$user_prompt .= "- Vulnerabilities = deduction\n";
+		$user_prompt .= "- Firewall blocks, failed logins = GOOD (no deduction)\n";
+		$user_prompt .= "- File changes from updates = normal (no deduction)\n\n";
+		$user_prompt .= $summary;
+
 		// Call bearmor-home AI endpoint
 		$response = wp_remote_post( $home_url . '/wp-json/bearmor-home/v1/ai-analyze', array(
 			'headers' => array(
 				'Content-Type' => 'application/json',
 			),
 			'body'    => wp_json_encode( array(
-				'site_id'      => $site_id,
-				'summary_data' => $summary,
+				'site_id'        => $site_id,
+				'system_message' => $system_message,
+				'user_prompt'    => $user_prompt,
 			) ),
 			'timeout' => 30,
 		) );
@@ -106,7 +120,8 @@ class Bearmor_AI_Analyzer {
 
 		if ( $status_code !== 200 ) {
 			$error_message = isset( $data['message'] ) ? $data['message'] : 'Unknown API error';
-			return new WP_Error( 'api_error', $error_message, array( 'status' => $status_code ) );
+			error_log( 'BEARMOR AI: API error - Status: ' . $status_code . ', Response: ' . $body );
+			return new WP_Error( 'api_error', $error_message . ' (Status: ' . $status_code . ')', array( 'status' => $status_code ) );
 		}
 
 		if ( ! isset( $data['ai_response'] ) ) {
