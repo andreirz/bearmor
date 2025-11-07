@@ -95,11 +95,15 @@ if ( isset( $_POST['bearmor_restore'] ) && check_admin_referer( 'bearmor_restore
 	}
 }
 
+// Check if baseline exists
+global $wpdb;
+$baseline_count = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_file_checksums" );
+$baseline_exists = ( $baseline_count > 0 );
+
 // Get changed files
 $changed_files = Bearmor_Checksum::get_changed_files();
 
 // Get quarantined files
-global $wpdb;
 $quarantined_files = $wpdb->get_results(
 	"SELECT * FROM {$wpdb->prefix}bearmor_quarantine WHERE status = 'quarantined' ORDER BY quarantined_at DESC"
 );
@@ -122,28 +126,48 @@ wp_enqueue_style( 'bearmor-dashboard', BEARMOR_PLUGIN_URL . 'assets/css/dashboar
 	<!-- Scan Actions -->
 	<div class="bearmor-scan-actions" style="margin: 20px 0; padding: 24px; background: #fff; border: 1px solid #e0e0e0; border-radius: 10px;">
 		<h2 style="margin-top: 0;">Scan Actions</h2>
-		<form method="post" style="display: inline-block; margin-right: 10px;">
-			<?php wp_nonce_field( 'bearmor_scan' ); ?>
-			<button type="submit" name="bearmor_scan" value="baseline" class="button button-primary">
-				Run Baseline Scan
-			</button>
-			<p class="description">Creates initial checksums for all files (WP core, plugins, themes)</p>
-		</form>
-
-		<form method="post" style="display: inline-block;">
-			<?php wp_nonce_field( 'bearmor_scan' ); ?>
-			<button type="submit" name="bearmor_scan" value="integrity" class="button button-secondary">
-				Run Integrity Check
-			</button>
-			<p class="description">Compares current files against baseline to detect changes</p>
-		</form>
+		
+		<?php if ( $baseline_exists ) : ?>
+			<!-- Baseline exists - show status and integrity check only -->
+			<div style="margin-bottom: 20px; padding: 12px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px; color: #155724;">
+				<span class="dashicons dashicons-yes-alt" style="color: #28a745;"></span>
+				<strong>Baseline scan completed</strong> - <?php echo number_format( $baseline_count ); ?> files monitored.
+				<span style="color: #666; font-size: 12px;">(To rebuild baseline, go to Settings → File Monitoring)</span>
+			</div>
+			
+			<form method="post" style="display: inline-block;">
+				<?php wp_nonce_field( 'bearmor_scan' ); ?>
+				<button type="submit" name="bearmor_scan" value="integrity" class="button button-primary">
+					<span class="dashicons dashicons-search" style="margin-top: 3px;"></span> Run Integrity Check
+				</button>
+				<p class="description">Compares current files against baseline to detect changes</p>
+			</form>
+		<?php else : ?>
+			<!-- No baseline - show warning and baseline button -->
+			<div style="margin-bottom: 20px; padding: 12px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; color: #856404;">
+				<span class="dashicons dashicons-warning" style="color: #ffc107;"></span>
+				<strong>Baseline scan not completed</strong> - File monitoring is not active. Run baseline scan to start monitoring.
+			</div>
+			
+			<form method="post" style="display: inline-block; margin-right: 10px;">
+				<?php wp_nonce_field( 'bearmor_scan' ); ?>
+				<button type="submit" name="bearmor_scan" value="baseline" class="button button-primary">
+					<span class="dashicons dashicons-update" style="margin-top: 3px;"></span> Run Baseline Scan
+				</button>
+				<p class="description">Creates initial checksums for all files (WP core, plugins, themes)</p>
+			</form>
+		<?php endif; ?>
 	</div>
 
 	<!-- Changed Files List -->
 	<h2>Changed Files (<?php echo count( $changed_files ); ?>)</h2>
 
 	<?php if ( empty( $changed_files ) ) : ?>
-		<p>No file changes detected. Run a baseline scan first, then an integrity check to detect changes.</p>
+		<?php if ( $baseline_exists ) : ?>
+			<p>No file changes detected. All files match the baseline.</p>
+		<?php else : ?>
+			<p>No file changes detected. Run a baseline scan first, then an integrity check to detect changes.</p>
+		<?php endif; ?>
 	<?php else : ?>
 		<table class="wp-list-table widefat fixed striped">
 			<thead>

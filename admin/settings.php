@@ -73,6 +73,17 @@ if ( isset( $_POST['bearmor_sync_uptime'] ) && check_admin_referer( 'bearmor_set
 	}
 }
 
+// Rebuild baseline scan
+if ( isset( $_POST['bearmor_rebuild_baseline'] ) && check_admin_referer( 'bearmor_settings' ) ) {
+	$results = Bearmor_File_Scanner::run_baseline_scan();
+	echo '<div class="notice notice-success"><p>';
+	echo '<strong>Baseline scan completed!</strong><br>';
+	echo 'Scanned: ' . esc_html( $results['scanned'] ) . ' files, ';
+	echo 'Stored: ' . esc_html( $results['stored'] ) . ' checksums, ';
+	echo 'Time: ' . esc_html( $results['time'] ) . 's';
+	echo '</p></div>';
+}
+
 
 $settings = get_option( 'bearmor_settings', array() );
 $license_info = Bearmor_License::get_info();
@@ -253,6 +264,47 @@ if ( $last_verified ) {
 						<code>*.min.js</code> - Exclude file pattern<br>
 						<code>wp-backup-*</code> - Exclude with wildcard<br>
 						<code>.git/</code> - Exclude .git folder
+					</p>
+				</td>
+			</tr>
+		</table>
+
+		<h2>File Monitoring</h2>
+		<p class="description">Manage baseline scan for file integrity monitoring.</p>
+		<table class="form-table">
+			<tr>
+				<th scope="row">
+					<label>Rebuild Baseline Scan</label>
+				</th>
+				<td>
+					<?php
+					global $wpdb;
+					$baseline_count = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_file_checksums" );
+					?>
+					<?php if ( $baseline_count > 0 ) : ?>
+						<p style="color: #155724; background: #d4edda; padding: 10px; border-left: 3px solid #28a745; margin-bottom: 10px;">
+							<span class="dashicons dashicons-yes-alt" style="color: #28a745;"></span>
+							<strong>Baseline active:</strong> <?php echo number_format( $baseline_count ); ?> files monitored
+						</p>
+					<?php else : ?>
+						<p style="color: #856404; background: #fff3cd; padding: 10px; border-left: 3px solid #ffc107; margin-bottom: 10px;">
+							<span class="dashicons dashicons-warning" style="color: #ffc107;"></span>
+							<strong>No baseline found.</strong> File monitoring is not active.
+						</p>
+					<?php endif; ?>
+					
+					<button type="submit" name="bearmor_rebuild_baseline" class="button button-secondary">
+						<span class="dashicons dashicons-update" style="margin-top: 3px;"></span> Rebuild Baseline Scan
+					</button>
+					
+					<p class="description" style="margin-top: 10px;">
+						<strong>⚠️ When to rebuild baseline:</strong><br>
+						• After cleaning malware or infected files from your site<br>
+						• After major plugin/theme updates that modified many files<br>
+						• If you want to reset the "clean state" reference point<br>
+						• When you've verified all current files are legitimate<br><br>
+						<strong>Note:</strong> Rebuilding will replace the existing baseline with current file checksums. 
+						This process may take 30-120 seconds depending on site size.
 					</p>
 				</td>
 			</tr>
