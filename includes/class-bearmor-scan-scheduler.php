@@ -18,6 +18,7 @@ class Bearmor_Scan_Scheduler {
 	public static function init() {
 		// Schedule hooks
 		add_action( 'bearmor_daily_malware_scan', array( __CLASS__, 'run_malware_scan' ) );
+		add_action( 'bearmor_daily_integrity_check', array( __CLASS__, 'run_integrity_check' ) );
 		add_action( 'bearmor_weekly_deep_scan', array( __CLASS__, 'run_deep_scan' ) );
 		add_action( 'bearmor_daily_ai_analysis', array( __CLASS__, 'run_ai_analysis' ) );
 
@@ -42,6 +43,14 @@ class Bearmor_Scan_Scheduler {
 			error_log( 'BEARMOR: Scheduled daily malware scan at 3 AM' );
 		}
 
+		// Schedule file integrity check (1 hour after malware scan)
+		if ( ! wp_next_scheduled( 'bearmor_daily_integrity_check' ) ) {
+			// Schedule for 4 AM (1 hour after malware scan)
+			$time = strtotime( 'tomorrow 04:00:00' );
+			wp_schedule_event( $time, 'daily', 'bearmor_daily_integrity_check' );
+			error_log( 'BEARMOR: Scheduled daily integrity check at 4 AM' );
+		}
+
 		// Schedule AI analysis at random time (spread load across 24h)
 		if ( ! wp_next_scheduled( 'bearmor_daily_ai_analysis' ) ) {
 			// Random offset within 24 hours
@@ -60,6 +69,7 @@ class Bearmor_Scan_Scheduler {
 	 */
 	public static function unschedule_scans() {
 		wp_clear_scheduled_hook( 'bearmor_daily_malware_scan' );
+		wp_clear_scheduled_hook( 'bearmor_daily_integrity_check' );
 		wp_clear_scheduled_hook( 'bearmor_weekly_deep_scan' );
 		wp_clear_scheduled_hook( 'bearmor_daily_ai_analysis' );
 		error_log( 'BEARMOR: Unscheduled all scans' );
@@ -83,6 +93,36 @@ class Bearmor_Scan_Scheduler {
 			error_log( 'BEARMOR: Malware scan error - ' . $result->get_error_message() );
 		} else {
 			error_log( 'BEARMOR: Malware scan completed - ' . $result['threats'] . ' threats found' );
+		}
+	}
+
+	/**
+	 * Run file integrity check (WP Cron callback)
+	 */
+	public static function run_integrity_check() {
+		error_log( 'BEARMOR: Starting scheduled integrity check' );
+
+		if ( ! class_exists( 'Bearmor_File_Scanner' ) ) {
+			error_log( 'BEARMOR: File scanner class not found' );
+			return;
+		}
+
+		// Check if baseline exists
+		global $wpdb;
+		$baseline_count = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_file_checksums" );
+		
+		if ( $baseline_count == 0 ) {
+			error_log( 'BEARMOR: Integrity check skipped - no baseline found' );
+			return;
+		}
+
+		// Run integrity check
+		$result = Bearmor_File_Scanner::run_integrity_check();
+
+		if ( is_wp_error( $result ) ) {
+			error_log( 'BEARMOR: Integrity check error - ' . $result->get_error_message() );
+		} else {
+			error_log( 'BEARMOR: Integrity check completed - ' . $result['changed'] . ' files changed out of ' . $result['checked'] );
 		}
 	}
 
@@ -167,12 +207,14 @@ class Bearmor_Scan_Scheduler {
 	/**
 	 * Get next scheduled scan time
 	 *
-	 * @param string $scan_type 'malware' or 'deep'
+	 * @param string $scan_type 'malware', 'integrity', or 'deep'
 	 * @return int|false Timestamp or false
 	 */
 	public static function get_next_scan_time( $scan_type ) {
 		if ( $scan_type === 'malware' ) {
 			return wp_next_scheduled( 'bearmor_daily_malware_scan' );
+		} elseif ( $scan_type === 'integrity' ) {
+			return wp_next_scheduled( 'bearmor_daily_integrity_check' );
 		} elseif ( $scan_type === 'deep' ) {
 			return wp_next_scheduled( 'bearmor_weekly_deep_scan' );
 		}
