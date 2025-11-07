@@ -3,7 +3,7 @@
  * Plugin Name: Bearmor Security
  * Plugin URI: https://bearmor.com
  * Description: Lightweight, robust WordPress security plugin for SMBs.
- * Version: 0.4.3
+ * Version: 0.4.4
  * Author: Bearmor Security Team
  * Author URI: https://bearmor.com
  * License: GPL v2 or later
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'BEARMOR_VERSION', '0.1.8' );
+define( 'BEARMOR_VERSION', '0.4.4' );
 define( 'BEARMOR_PLUGIN_FILE', __FILE__ );
 define( 'BEARMOR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BEARMOR_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -350,12 +350,19 @@ function bearmor_activate() {
 	}
 
 	// Auto-schedule baseline scan if not done yet
-	if ( ! get_option( 'bearmor_baseline_hash' ) ) {
-		// Schedule baseline scan 5 minutes after activation
+	// Check if baseline table is empty (more reliable than option check)
+	$baseline_count = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_file_checksums" );
+	
+	if ( $baseline_count == 0 ) {
+		// Schedule baseline scan 2 minutes after activation
 		if ( ! wp_next_scheduled( 'bearmor_initial_baseline_scan' ) ) {
-			wp_schedule_single_event( time() + 300, 'bearmor_initial_baseline_scan' );
-			error_log( 'BEARMOR: Baseline scan scheduled for 5 minutes from now' );
+			wp_schedule_single_event( time() + 120, 'bearmor_initial_baseline_scan' );
+			error_log( 'BEARMOR: Baseline scan scheduled for 2 minutes from now' );
 		}
+		
+		// Also set a flag to trigger on next admin page load (fallback if cron fails)
+		update_option( 'bearmor_needs_baseline', true );
+		error_log( 'BEARMOR: Baseline needed flag set' );
 	}
 
 	// Trigger activation hook for call-home and scheduling
@@ -430,29 +437,74 @@ Bearmor_Vulnerability_Scanner::init();
 function bearmor_run_initial_baseline_scan() {
 	error_log( 'BEARMOR: Running automatic baseline scan...' );
 	
-	// Check if already done
-	if ( get_option( 'bearmor_baseline_hash' ) ) {
-		error_log( 'BEARMOR: Baseline already exists, skipping' );
+	// Check if already done (check table, not option)
+	global $wpdb;
+	$baseline_count = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_file_checksums" );
+	
+	if ( $baseline_count > 0 ) {
+		error_log( 'BEARMOR: Baseline already exists (' . $baseline_count . ' files), skipping' );
+		delete_option( 'bearmor_needs_baseline' );
 		return;
 	}
 	
 	// Run the scan
 	$results = Bearmor_File_Scanner::run_baseline_scan();
 	
+	// Remove the flag
+	delete_option( 'bearmor_needs_baseline' );
+	
 	error_log( 'BEARMOR: Baseline scan complete - Scanned: ' . $results['scanned'] . ', Stored: ' . $results['stored'] );
 }
 add_action( 'bearmor_initial_baseline_scan', 'bearmor_run_initial_baseline_scan' );
 
 /**
+ * Auto-run baseline on admin_init if needed (fallback if cron fails)
+ */
+function bearmor_auto_baseline_fallback() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+	
+	// Check if baseline is needed
+	if ( get_option( 'bearmor_needs_baseline' ) ) {
+		global $wpdb;
+		$baseline_count = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_file_checksums" );
+		
+		if ( $baseline_count == 0 ) {
+			error_log( 'BEARMOR: Running baseline scan via admin_init fallback' );
+			
+			// Run baseline in background (don't block admin)
+			wp_schedule_single_event( time() + 5, 'bearmor_initial_baseline_scan' );
+			
+			// Show notice that scan is starting
+			add_action( 'admin_notices', function() {
+				?>
+				<div class="notice notice-info">
+					<p><strong>Bearmor Security:</strong> Baseline scan is starting in the background. This may take a few minutes.</p>
+				</div>
+				<?php
+			} );
+			
+			// Remove flag after scheduling
+			delete_option( 'bearmor_needs_baseline' );
+		}
+	}
+}
+add_action( 'admin_init', 'bearmor_auto_baseline_fallback', 5 );
+
+/**
  * Show notice to run baseline scan (only if auto-scan failed)
  */
 function bearmor_baseline_scan_notice() {
+	global $wpdb;
+	$baseline_count = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_file_checksums" );
+	
 	// Only show if baseline doesn't exist and no scan is scheduled
-	if ( ! get_option( 'bearmor_baseline_hash' ) && ! wp_next_scheduled( 'bearmor_initial_baseline_scan' ) && current_user_can( 'manage_options' ) ) {
+	if ( $baseline_count == 0 && ! wp_next_scheduled( 'bearmor_initial_baseline_scan' ) && current_user_can( 'manage_options' ) ) {
 		?>
 		<div class="notice notice-warning is-dismissible" style="clear: both; display: block; width: 100%; float: none;">
 			<p>
-				<strong>Bearmor Security:</strong> Please run a baseline scan to start monitoring file changes.
+				<strong>Bearmor Security:</strong> Baseline scan not found. Click to start monitoring file changes.
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-file-changes' ) ); ?>" class="button button-primary" style="margin-left: 10px;">
 					Run Baseline Scan
 				</a>
@@ -524,6 +576,37 @@ add_action( 'bearmor_create_plugin_baseline', function( $plugin_slug ) {
 add_action( 'bearmor_create_theme_baseline', function( $theme_slug ) {
 	Bearmor_File_Scanner::create_theme_baseline( $theme_slug );
 } );
+
+/**
+ * Check if baseline needs to be created on existing installations
+ * This runs once after plugin update to fix sites without baseline
+ */
+function bearmor_check_baseline_on_load() {
+	// Only run once per admin session
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+	
+	// Check if we've already done this check
+	$checked = get_transient( 'bearmor_baseline_checked' );
+	if ( $checked ) {
+		return;
+	}
+	
+	// Set transient for 1 hour to avoid repeated checks
+	set_transient( 'bearmor_baseline_checked', true, HOUR_IN_SECONDS );
+	
+	// Check if baseline exists
+	global $wpdb;
+	$baseline_count = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_file_checksums" );
+	
+	if ( $baseline_count == 0 ) {
+		// No baseline - set flag to trigger creation
+		update_option( 'bearmor_needs_baseline', true );
+		error_log( 'BEARMOR: No baseline found on existing installation, triggering auto-creation' );
+	}
+}
+add_action( 'admin_init', 'bearmor_check_baseline_on_load', 1 );
 
 /**
  * AJAX handler for file preview
