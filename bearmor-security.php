@@ -3,7 +3,7 @@
  * Plugin Name: Bearmor Security
  * Plugin URI: https://bearmor.com
  * Description: Lightweight, robust WordPress security plugin for SMBs.
- * Version: 0.6.2
+ * Version: 0.6.3
  * Author: Bearmor Security Team
  * Author URI: https://bearmor.com
  * License: GPL v2 or later
@@ -19,8 +19,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'BEARMOR_VERSION', '0.6.2' );
-define( 'BEARMOR_DB_VERSION', '1.1' ); // Database schema version
+define( 'BEARMOR_VERSION', '0.6.3' );
+define( 'BEARMOR_DB_VERSION', '1.2' ); // Database schema version
 define( 'BEARMOR_PLUGIN_FILE', __FILE__ );
 define( 'BEARMOR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BEARMOR_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -66,31 +66,49 @@ function bearmor_check_db_version() {
 function bearmor_run_db_migrations( $from_version ) {
 	global $wpdb;
 	
-	// Migration 1.0 -> 1.1: Add missing columns
-	if ( version_compare( $from_version, '1.1', '<' ) ) {
-		error_log( 'BEARMOR: Running migration 1.0 -> 1.1' );
+	// Migration 1.0 -> 1.2: Add missing columns (MySQL 5.6 compatible)
+	if ( version_compare( $from_version, '1.2', '<' ) ) {
+		error_log( 'BEARMOR: Running migration to 1.2' );
 		
-		// Add change_type to bearmor_file_changes
-		$wpdb->query( "ALTER TABLE {$wpdb->prefix}bearmor_file_changes 
-			ADD COLUMN IF NOT EXISTS change_type VARCHAR(20) DEFAULT 'modified' AFTER file_path" );
+		// Check and add change_type to bearmor_file_changes
+		$column_exists = $wpdb->get_results( "SHOW COLUMNS FROM {$wpdb->prefix}bearmor_file_changes LIKE 'change_type'" );
+		if ( empty( $column_exists ) ) {
+			$wpdb->query( "ALTER TABLE {$wpdb->prefix}bearmor_file_changes 
+				ADD COLUMN change_type VARCHAR(20) DEFAULT 'modified' AFTER file_path" );
+			error_log( 'BEARMOR: Added change_type column' );
+		}
 		
-		// Add timestamp and description to bearmor_activity_log
-		$wpdb->query( "ALTER TABLE {$wpdb->prefix}bearmor_activity_log 
-			ADD COLUMN IF NOT EXISTS timestamp DATETIME DEFAULT CURRENT_TIMESTAMP AFTER id" );
-		$wpdb->query( "ALTER TABLE {$wpdb->prefix}bearmor_activity_log 
-			ADD COLUMN IF NOT EXISTS description TEXT AFTER action" );
+		// Check and add timestamp to bearmor_activity_log
+		$column_exists = $wpdb->get_results( "SHOW COLUMNS FROM {$wpdb->prefix}bearmor_activity_log LIKE 'timestamp'" );
+		if ( empty( $column_exists ) ) {
+			$wpdb->query( "ALTER TABLE {$wpdb->prefix}bearmor_activity_log 
+				ADD COLUMN timestamp DATETIME DEFAULT CURRENT_TIMESTAMP AFTER id" );
+			error_log( 'BEARMOR: Added timestamp column' );
+		}
 		
-		// Add description to bearmor_login_anomalies
-		$wpdb->query( "ALTER TABLE {$wpdb->prefix}bearmor_login_anomalies 
-			ADD COLUMN IF NOT EXISTS description TEXT AFTER anomaly_type" );
+		// Check and add description to bearmor_activity_log
+		$column_exists = $wpdb->get_results( "SHOW COLUMNS FROM {$wpdb->prefix}bearmor_activity_log LIKE 'description'" );
+		if ( empty( $column_exists ) ) {
+			$wpdb->query( "ALTER TABLE {$wpdb->prefix}bearmor_activity_log 
+				ADD COLUMN description TEXT AFTER action" );
+			error_log( 'BEARMOR: Added description column to activity_log' );
+		}
 		
-		// Increase field size for bearmor_ai_analyses
+		// Check and add description to bearmor_login_anomalies
+		$column_exists = $wpdb->get_results( "SHOW COLUMNS FROM {$wpdb->prefix}bearmor_login_anomalies LIKE 'description'" );
+		if ( empty( $column_exists ) ) {
+			$wpdb->query( "ALTER TABLE {$wpdb->prefix}bearmor_login_anomalies 
+				ADD COLUMN description TEXT AFTER anomaly_type" );
+			error_log( 'BEARMOR: Added description column to login_anomalies' );
+		}
+		
+		// Increase field size for bearmor_ai_analyses (always safe to run)
 		$wpdb->query( "ALTER TABLE {$wpdb->prefix}bearmor_ai_analyses 
 			MODIFY COLUMN summary_data LONGTEXT" );
 		$wpdb->query( "ALTER TABLE {$wpdb->prefix}bearmor_ai_analyses 
 			MODIFY COLUMN ai_prompt LONGTEXT" );
 		
-		error_log( 'BEARMOR: Migration 1.0 -> 1.1 complete' );
+		error_log( 'BEARMOR: Migration to 1.2 complete' );
 	}
 }
 
