@@ -317,6 +317,10 @@ class Bearmor_AI_Analyzer {
 		$columns = $wpdb->get_results( "SHOW COLUMNS FROM {$table_name}" );
 		$column_names = wp_list_pluck( $columns, 'Field' );
 		
+		error_log( 'BEARMOR AI: Table columns: ' . implode( ', ', $column_names ) );
+		error_log( 'BEARMOR AI: Insert data keys: ' . implode( ', ', array_keys( $insert_data ) ) );
+		error_log( 'BEARMOR AI: Insert formats: ' . implode( ', ', $insert_formats ) );
+		
 		if ( in_array( 'discretionary_score', $column_names ) ) {
 			$insert_data['discretionary_score'] = isset( $response['discretionary_score'] ) ? $response['discretionary_score'] : 0;
 			$insert_formats[] = '%d';
@@ -324,6 +328,11 @@ class Bearmor_AI_Analyzer {
 		
 		if ( in_array( 'score_reason', $column_names ) ) {
 			$insert_data['score_reason'] = isset( $response['score_reason'] ) ? $response['score_reason'] : '';
+			$insert_formats[] = '%s';
+		}
+		
+		if ( in_array( 'color_rating', $column_names ) ) {
+			$insert_data['color_rating'] = isset( $response['color'] ) ? $response['color'] : 'gray';
 			$insert_formats[] = '%s';
 		}
 		
