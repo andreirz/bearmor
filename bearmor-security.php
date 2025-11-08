@@ -3,7 +3,7 @@
  * Plugin Name: Bearmor Security
  * Plugin URI: https://bearmor.com
  * Description: Lightweight, robust WordPress security plugin for SMBs.
- * Version: 0.5.9
+ * Version: 0.6.0
  * Author: Bearmor Security Team
  * Author URI: https://bearmor.com
  * License: GPL v2 or later
@@ -19,7 +19,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'BEARMOR_VERSION', '0.5.9' );
+define( 'BEARMOR_VERSION', '0.6.0' );
+define( 'BEARMOR_DB_VERSION', '1.1' ); // Database schema version
 define( 'BEARMOR_PLUGIN_FILE', __FILE__ );
 define( 'BEARMOR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BEARMOR_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -43,6 +44,55 @@ require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-license.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-callhome.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-placeholder.php';
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-uptime-sync.php';
+
+/**
+ * Check and run database migrations on every load
+ */
+add_action( 'plugins_loaded', 'bearmor_check_db_version' );
+function bearmor_check_db_version() {
+	$current_db_version = get_option( 'bearmor_db_version', '1.0' );
+	
+	if ( version_compare( $current_db_version, BEARMOR_DB_VERSION, '<' ) ) {
+		error_log( 'BEARMOR: Database migration needed. Current: ' . $current_db_version . ', Required: ' . BEARMOR_DB_VERSION );
+		bearmor_run_db_migrations( $current_db_version );
+		update_option( 'bearmor_db_version', BEARMOR_DB_VERSION );
+		error_log( 'BEARMOR: Database migrated to version ' . BEARMOR_DB_VERSION );
+	}
+}
+
+/**
+ * Run database migrations
+ */
+function bearmor_run_db_migrations( $from_version ) {
+	global $wpdb;
+	
+	// Migration 1.0 -> 1.1: Add missing columns
+	if ( version_compare( $from_version, '1.1', '<' ) ) {
+		error_log( 'BEARMOR: Running migration 1.0 -> 1.1' );
+		
+		// Add change_type to bearmor_file_changes
+		$wpdb->query( "ALTER TABLE {$wpdb->prefix}bearmor_file_changes 
+			ADD COLUMN IF NOT EXISTS change_type VARCHAR(20) DEFAULT 'modified' AFTER file_path" );
+		
+		// Add timestamp and description to bearmor_activity_log
+		$wpdb->query( "ALTER TABLE {$wpdb->prefix}bearmor_activity_log 
+			ADD COLUMN IF NOT EXISTS timestamp DATETIME DEFAULT CURRENT_TIMESTAMP AFTER id" );
+		$wpdb->query( "ALTER TABLE {$wpdb->prefix}bearmor_activity_log 
+			ADD COLUMN IF NOT EXISTS description TEXT AFTER action" );
+		
+		// Add description to bearmor_login_anomalies
+		$wpdb->query( "ALTER TABLE {$wpdb->prefix}bearmor_login_anomalies 
+			ADD COLUMN IF NOT EXISTS description TEXT AFTER anomaly_type" );
+		
+		// Increase field size for bearmor_ai_analyses
+		$wpdb->query( "ALTER TABLE {$wpdb->prefix}bearmor_ai_analyses 
+			MODIFY COLUMN summary_data LONGTEXT" );
+		$wpdb->query( "ALTER TABLE {$wpdb->prefix}bearmor_ai_analyses 
+			MODIFY COLUMN ai_prompt LONGTEXT" );
+		
+		error_log( 'BEARMOR: Migration 1.0 -> 1.1 complete' );
+	}
+}
 
 /**
  * Plugin activation
