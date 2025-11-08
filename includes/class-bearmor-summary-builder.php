@@ -97,6 +97,7 @@ class Bearmor_Summary_Builder {
 		} else {
 			$summary .= "(none)\n";
 		}
+		$summary .= "\nInterpretation: Check file paths and code context. Image optimization plugins (webp-express, imagify) using system() = legitimate. Base64 in JWT/OAuth libraries = normal. JavaScript eval() = often legitimate. Focus on suspicious combinations: base64+eval, $_POST with exec, or obfuscated code in uploads.\n";
 		$summary .= "\n";
 
 		// 2. FILE CHANGES - CATEGORIZED BY TYPE
@@ -181,6 +182,7 @@ class Bearmor_Summary_Builder {
 		} else {
 			$summary .= "No changes detected\n";
 		}
+		$summary .= "\nInterpretation: File changes in wp-content/plugins or wp-content/themes = normal plugin/theme updates (safe). Changes in wp-admin or wp-includes = CRITICAL (core files). New PHP files in wp-content/uploads = HIGH RISK. Monitor core changes closely.\n";
 		$summary .= "\n";
 
 		// 3. VULNERABILITIES
@@ -230,6 +232,7 @@ class Bearmor_Summary_Builder {
 		} else {
 			$summary .= "All plugins/themes up to date\n";
 		}
+		$summary .= "\nInterpretation: CRITICAL vulnerabilities = immediate update required. HIGH = update soon. MEDIUM = monitor and plan update. Outdated plugins are normal for sites not actively maintained. Focus on CRITICAL/HIGH with known exploits.\n";
 		$summary .= "\n";
 
 		// 4. LOGIN ACTIVITY
