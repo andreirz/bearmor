@@ -178,6 +178,7 @@ if ( $last_verified ) {
 			$cron_tasks = array(
 				'bearmor_daily_malware_scan' => 'Malware Scan',
 				'bearmor_daily_vulnerability_scan' => 'Vulnerability Scan',
+				'bearmor_daily_integrity_check' => 'File Integrity Check',
 				'bearmor_weekly_deep_scan' => 'Deep Scan',
 				'bearmor_daily_ai_analysis' => 'AI Analysis (PRO)',
 				'bearmor_daily_callhome' => 'License Check',
