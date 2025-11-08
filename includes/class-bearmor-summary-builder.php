@@ -333,19 +333,29 @@ class Bearmor_Summary_Builder {
 			if ( $deep_scan['uploads']['count'] > 0 ) {
 				$summary .= "\nUPLOADS ({$deep_scan['uploads']['count']}):\n";
 				if ( ! empty( $deep_scan['uploads']['details'] ) ) {
-					foreach ( $deep_scan['uploads']['details'] as $idx => $threat ) {
-						if ( $idx >= 3 ) break; // Limit to 3
-						$pattern = ! empty( $threat['pattern'] ) ? $threat['pattern'] : 'Suspicious file';
-						$summary .= ( $idx + 1 ) . ". {$threat['location']}\n";
-						if ( ! empty( $threat['matched_code'] ) ) {
-							$size = strlen( $threat['matched_code'] );
-							$preview = substr( $threat['matched_code'], 0, 40 );
-							$summary .= "   Size: {$size} bytes\n";
-							$summary .= "   Content: {$preview}...\n";
+					foreach ( array_slice( $deep_scan['uploads']['details'], 0, 5 ) as $threat ) {
+						$summary .= "{$threat['location']}\n";
+						
+						// Try to read actual file content for preview
+						$file_path = ABSPATH . $threat['location'];
+						$content_preview = '';
+						if ( file_exists( $file_path ) && is_readable( $file_path ) ) {
+							$file_size = filesize( $file_path );
+							$summary .= "   Size: {$file_size} bytes\n";
+							
+							if ( $file_size < 1000 ) {
+								$content = file_get_contents( $file_path );
+								$content_preview = substr( $content, 0, 60 );
+							} else {
+								$content_preview = substr( file_get_contents( $file_path, false, null, 0, 60 ), 0, 60 );
+							}
+							$summary .= "   Content: " . trim( $content_preview ) . "...\n";
+						} else {
+							$summary .= "   Content: (file not readable)\n";
 						}
 					}
-					if ( $deep_scan['uploads']['count'] > 3 ) {
-						$summary .= "... and " . ( $deep_scan['uploads']['count'] - 3 ) . " more\n";
+					if ( $deep_scan['uploads']['count'] > 5 ) {
+						$summary .= "... and " . ( $deep_scan['uploads']['count'] - 5 ) . " more\n";
 					}
 				}
 			}
@@ -529,7 +539,7 @@ class Bearmor_Summary_Builder {
 		// Get actual block details (not just counts)
 		$details = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT ip_address, request_uri, reason 
+				"SELECT ip_address, request_uri, rule_matched as reason 
 				FROM {$wpdb->prefix}bearmor_firewall_blocks 
 				WHERE blocked_at >= DATE_SUB(NOW(), INTERVAL %d DAY)
 				ORDER BY blocked_at DESC LIMIT 10",
