@@ -3,7 +3,7 @@
  * Plugin Name: Bearmor Security
  * Plugin URI: https://bearmor.com
  * Description: Lightweight, robust WordPress security plugin for SMBs.
- * Version: 0.6.3
+ * Version: 0.6.4
  * Author: Bearmor Security Team
  * Author URI: https://bearmor.com
  * License: GPL v2 or later
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'BEARMOR_VERSION', '0.6.3' );
+define( 'BEARMOR_VERSION', '0.6.4' );
 define( 'BEARMOR_DB_VERSION', '1.2' ); // Database schema version
 define( 'BEARMOR_PLUGIN_FILE', __FILE__ );
 define( 'BEARMOR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );

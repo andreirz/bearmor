@@ -330,11 +330,21 @@ class Bearmor_AI_Analyzer {
 		// Log data sizes before insert
 		error_log( 'BEARMOR AI: Data sizes - summary_data: ' . strlen( $insert_data['summary_data'] ) . ' bytes, ai_prompt: ' . strlen( $insert_data['ai_prompt'] ) . ' bytes' );
 		
+		// Enable MySQL error reporting
+		$wpdb->show_errors();
+		$wpdb->suppress_errors( false );
+		
 		$result = $wpdb->insert( $table_name, $insert_data, $insert_formats );
 		
 		if ( $result === false ) {
-			error_log( 'BEARMOR AI: Save failed - MySQL Error: ' . $wpdb->last_error );
-			error_log( 'BEARMOR AI: Last query: ' . $wpdb->last_query );
+			// Get raw MySQL error
+			global $EZSQL_ERROR;
+			error_log( 'BEARMOR AI: Save failed!' );
+			error_log( 'BEARMOR AI: wpdb->last_error: ' . $wpdb->last_error );
+			error_log( 'BEARMOR AI: wpdb->last_query: ' . $wpdb->last_query );
+			if ( ! empty( $EZSQL_ERROR ) ) {
+				error_log( 'BEARMOR AI: Raw MySQL errors: ' . print_r( $EZSQL_ERROR, true ) );
+			}
 		} else {
 			error_log( 'BEARMOR AI: Analysis saved successfully - ID: ' . $wpdb->insert_id );
 		}
