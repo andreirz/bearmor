@@ -57,10 +57,21 @@ class Bearmor_Summary_Builder {
 		if ( $high_count > 0 && ! empty( $high_threats ) ) {
 			foreach ( $high_threats as $threat ) {
 				$pattern = ! empty( $threat['pattern_name'] ) ? $threat['pattern_name'] : $threat['pattern_id'];
+				
+				// Skip Long Base64 String patterns entirely (saves tokens)
+				if ( stripos( $pattern, 'Long Base64' ) !== false || stripos( $pattern, 'base64_string' ) !== false ) {
+					$summary .= "- {$threat['file_path']} (line {$threat['line_number']}): {$pattern} [content stripped to save tokens]\n";
+					continue;
+				}
+				
 				$summary .= "- {$threat['file_path']} (line {$threat['line_number']}): {$pattern}\n";
-				// Add 3 lines of code context if available
+				// Add code context if available (truncated to 200 chars max)
 				if ( ! empty( $threat['code_snippet'] ) ) {
-					$lines = explode( "\n", $threat['code_snippet'] );
+					$snippet = $threat['code_snippet'];
+					if ( strlen( $snippet ) > 200 ) {
+						$snippet = substr( $snippet, 0, 200 ) . '... [truncated]';
+					}
+					$lines = explode( "\n", $snippet );
 					foreach ( $lines as $line ) {
 						$summary .= "  " . trim( $line ) . "\n";
 					}
@@ -80,10 +91,21 @@ class Bearmor_Summary_Builder {
 		if ( $medium_count > 0 && ! empty( $medium_threats ) ) {
 			foreach ( $medium_threats as $threat ) {
 				$pattern = ! empty( $threat['pattern_name'] ) ? $threat['pattern_name'] : $threat['pattern_id'];
+				
+				// Skip Long Base64 String patterns entirely (saves tokens)
+				if ( stripos( $pattern, 'Long Base64' ) !== false || stripos( $pattern, 'base64_string' ) !== false ) {
+					$summary .= "- {$threat['file_path']} (line {$threat['line_number']}): {$pattern} [content stripped to save tokens]\n";
+					continue;
+				}
+				
 				$summary .= "- {$threat['file_path']} (line {$threat['line_number']}): {$pattern}\n";
-				// Add 3 lines of code context if available
+				// Add code context if available (truncated to 200 chars max)
 				if ( ! empty( $threat['code_snippet'] ) ) {
-					$lines = explode( "\n", $threat['code_snippet'] );
+					$snippet = $threat['code_snippet'];
+					if ( strlen( $snippet ) > 200 ) {
+						$snippet = substr( $snippet, 0, 200 ) . '... [truncated]';
+					}
+					$lines = explode( "\n", $snippet );
 					$line_count = 0;
 					foreach ( $lines as $line ) {
 						if ( $line_count++ >= 3 ) break; // Limit to 3 lines for MEDIUM
@@ -98,6 +120,7 @@ class Bearmor_Summary_Builder {
 			$summary .= "(none)\n";
 		}
 		$summary .= "\nInterpretation: Check file paths and code context. Image optimization plugins (webp-express, imagify) using system() = legitimate. Base64 in JWT/OAuth libraries = normal. JavaScript eval() = often legitimate. Focus on suspicious combinations: base64+eval, $_POST with exec, or obfuscated code in uploads.\n";
+		$summary .= "Note: Long base64 strings and code snippets >200 chars are truncated to reduce token usage.\n";
 		$summary .= "\n";
 
 		// 2. FILE CHANGES - CATEGORIZED BY TYPE
