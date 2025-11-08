@@ -300,11 +300,11 @@ class Bearmor_AI_Analyzer {
 		// Delete all old analyses - we only keep the latest one
 		$wpdb->query( "DELETE FROM {$wpdb->prefix}bearmor_ai_analyses" );
 		
-		// Build insert data - only include columns that exist
+		// Build insert data - sanitize to remove invalid UTF-8 and null bytes
 		$insert_data = array(
-			'summary_data' => $summary,
-			'ai_prompt'    => $response['prompt'],
-			'ai_response'  => $response['response'],
+			'summary_data' => mb_convert_encoding( $summary, 'UTF-8', 'UTF-8' ),
+			'ai_prompt'    => mb_convert_encoding( $response['prompt'], 'UTF-8', 'UTF-8' ),
+			'ai_response'  => mb_convert_encoding( $response['response'], 'UTF-8', 'UTF-8' ),
 			'model_used'   => $response['model'],
 			'tokens_used'  => $response['tokens_used'],
 			'created_at'   => current_time( 'mysql' ),
