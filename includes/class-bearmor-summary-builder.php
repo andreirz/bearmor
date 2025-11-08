@@ -26,86 +26,250 @@ class Bearmor_Summary_Builder {
 
 		// 1. MALWARE THREATS - SHOW ACTUAL CONTEXT!
 		$malware = self::get_malware_detections( $days );
-		$summary .= "MALWARE THREATS: {$malware['count']} files infected\n";
-		if ( $malware['count'] > 0 ) {
-			if ( ! empty( $malware['details'] ) ) {
-				foreach ( $malware['details'] as $idx => $threat ) {
-					if ( $idx >= 10 ) break; // Limit to 10 for AI
-					$file = basename( $threat['file_path'] );
-					$pattern = ! empty( $threat['pattern_name'] ) ? $threat['pattern_name'] : $threat['pattern_id'];
-					$code = ! empty( $threat['matched_text'] ) ? $threat['matched_text'] : $threat['code_snippet'];
-					$code_preview = $code ? ' - "' . substr( $code, 0, 50 ) . '..."' : '';
-					$summary .= "   - {$file} (line {$threat['line_number']}): {$pattern}{$code_preview}\n";
+		
+		// Separate by severity
+		$high_count = 0;
+		$medium_count = 0;
+		$high_threats = array();
+		$medium_threats = array();
+		
+		if ( ! empty( $malware['details'] ) ) {
+			foreach ( $malware['details'] as $threat ) {
+				if ( $threat['severity'] === 'high' || $threat['severity'] === 'critical' ) {
+					$high_count++;
+					if ( count( $high_threats ) < 5 ) {
+						$high_threats[] = $threat;
+					}
+				} else {
+					$medium_count++;
+					if ( count( $medium_threats ) < 5 ) {
+						$medium_threats[] = $threat;
+					}
 				}
-				if ( $malware['count'] > 10 ) {
-					$summary .= "   ... and " . ( $malware['count'] - 10 ) . " more infected files\n";
+			}
+		}
+		
+		$summary .= "MALWARE THREATS: {$malware['count']} files detected ({$high_count} HIGH, {$medium_count} MEDIUM)\n\n";
+		
+		// HIGH SEVERITY
+		$summary .= "HIGH SEVERITY ({$high_count} files):\n";
+		$summary .= "Examples: eval(\$_POST['cmd']), system(\$_GET['c']), base64+eval combo\n";
+		if ( $high_count > 0 && ! empty( $high_threats ) ) {
+			foreach ( $high_threats as $threat ) {
+				$pattern = ! empty( $threat['pattern_name'] ) ? $threat['pattern_name'] : $threat['pattern_id'];
+				$summary .= "- {$threat['file_path']} (line {$threat['line_number']}): {$pattern}\n";
+				// Add 3 lines of code context if available
+				if ( ! empty( $threat['code_snippet'] ) ) {
+					$lines = explode( "\n", $threat['code_snippet'] );
+					foreach ( $lines as $line ) {
+						$summary .= "  " . trim( $line ) . "\n";
+					}
 				}
-			} else {
-				$summary .= "   WARNING: {$malware['count']} threats detected - run Malware Scanner for details\n";
+			}
+			if ( $high_count > 5 ) {
+				$summary .= "... and " . ( $high_count - 5 ) . " more HIGH threats\n";
 			}
 		} else {
-			$summary .= "   No threats detected\n";
+			$summary .= "(none)\n";
+		}
+		$summary .= "\n";
+		
+		// MEDIUM SEVERITY
+		$summary .= "MEDIUM SEVERITY ({$medium_count} files):\n";
+		$summary .= "Examples: base64_decode alone, exec in plugins, fsockopen for APIs\n";
+		if ( $medium_count > 0 && ! empty( $medium_threats ) ) {
+			foreach ( $medium_threats as $threat ) {
+				$pattern = ! empty( $threat['pattern_name'] ) ? $threat['pattern_name'] : $threat['pattern_id'];
+				$summary .= "- {$threat['file_path']} (line {$threat['line_number']}): {$pattern}\n";
+				// Add 3 lines of code context if available
+				if ( ! empty( $threat['code_snippet'] ) ) {
+					$lines = explode( "\n", $threat['code_snippet'] );
+					$line_count = 0;
+					foreach ( $lines as $line ) {
+						if ( $line_count++ >= 3 ) break; // Limit to 3 lines for MEDIUM
+						$summary .= "  " . trim( $line ) . "\n";
+					}
+				}
+			}
+			if ( $medium_count > 5 ) {
+				$summary .= "... and " . ( $medium_count - 5 ) . " more MEDIUM threats\n";
+			}
+		} else {
+			$summary .= "(none)\n";
 		}
 		$summary .= "\n";
 
-		// 2. FILE CHANGES - SHOW ACTUAL FILES
+		// 2. FILE CHANGES - CATEGORIZED BY TYPE
 		$file_changes = self::get_file_changes( $days );
-		$summary .= "FILE CHANGES: {$file_changes['count']} files modified\n";
+		$summary .= "FILE CHANGES: {$file_changes['count']} files modified\n\n";
+		
 		if ( $file_changes['count'] > 0 && ! empty( $file_changes['details'] ) ) {
-			foreach ( $file_changes['details'] as $idx => $change ) {
-				if ( $idx >= 8 ) break; // Limit to 8
-				$summary .= "   - {$change['file']}: {$change['change_type']}\n";
+			// Categorize files
+			$core_files = array();
+			$plugin_files = array();
+			$theme_files = array();
+			$upload_files = array();
+			
+			foreach ( $file_changes['details'] as $change ) {
+				$path = $change['file_path'];
+				if ( strpos( $path, 'wp-admin/' ) === 0 || strpos( $path, 'wp-includes/' ) === 0 ) {
+					$core_files[] = $change;
+				} elseif ( strpos( $path, 'wp-content/plugins/' ) !== false ) {
+					$plugin_files[] = $change;
+				} elseif ( strpos( $path, 'wp-content/themes/' ) !== false ) {
+					$theme_files[] = $change;
+				} elseif ( strpos( $path, 'wp-content/uploads/' ) !== false ) {
+					$upload_files[] = $change;
+				}
 			}
-			if ( $file_changes['count'] > 8 ) {
-				$summary .= "   ... and " . ( $file_changes['count'] - 8 ) . " more files\n";
+			
+			// Core files
+			$summary .= "CORE FILES (" . count( $core_files ) . "):\n";
+			if ( count( $core_files ) > 0 ) {
+				foreach ( array_slice( $core_files, 0, 3 ) as $change ) {
+					$summary .= "- {$change['file_path']}\n";
+				}
+				if ( count( $core_files ) > 3 ) {
+					$summary .= "... and " . ( count( $core_files ) - 3 ) . " more\n";
+				}
+			} else {
+				$summary .= "(none)\n";
 			}
+			
+			// Plugin files
+			$summary .= "\nPLUGIN FILES (" . count( $plugin_files ) . "):\n";
+			if ( count( $plugin_files ) > 0 ) {
+				foreach ( array_slice( $plugin_files, 0, 5 ) as $change ) {
+					$summary .= "- {$change['file_path']}\n";
+				}
+				if ( count( $plugin_files ) > 5 ) {
+					$summary .= "... and " . ( count( $plugin_files ) - 5 ) . " more\n";
+				}
+			} else {
+				$summary .= "(none)\n";
+			}
+			
+			// Theme files
+			$summary .= "\nTHEME FILES (" . count( $theme_files ) . "):\n";
+			if ( count( $theme_files ) > 0 ) {
+				foreach ( array_slice( $theme_files, 0, 3 ) as $change ) {
+					$summary .= "- {$change['file_path']}\n";
+				}
+				if ( count( $theme_files ) > 3 ) {
+					$summary .= "... and " . ( count( $theme_files ) - 3 ) . " more\n";
+				}
+			} else {
+				$summary .= "(none)\n";
+			}
+			
+			// Uploads
+			$summary .= "\nUPLOADS (" . count( $upload_files ) . "):\n";
+			if ( count( $upload_files ) > 0 ) {
+				foreach ( array_slice( $upload_files, 0, 3 ) as $change ) {
+					$summary .= "- {$change['file_path']}\n";
+				}
+				if ( count( $upload_files ) > 3 ) {
+					$summary .= "... and " . ( count( $upload_files ) - 3 ) . " more\n";
+				}
+			} else {
+				$summary .= "(none)\n";
+			}
+			
+			$summary .= "\nNote: Plugin updates rebuild baseline automatically.\n";
 		} elseif ( $file_changes['count'] > 0 ) {
-			$summary .= "   WARNING: {$file_changes['count']} files modified (run File Monitor for details)\n";
+			$summary .= "WARNING: {$file_changes['count']} files modified (run File Monitor for details)\n";
 		} else {
-			$summary .= "   No changes detected\n";
+			$summary .= "No changes detected\n";
 		}
 		$summary .= "\n";
 
 		// 3. VULNERABILITIES
 		$vulns = self::get_vulnerabilities();
-		$summary .= "VULNERABILITIES: {$vulns['count']}\n";
-		if ( ! empty( $vulns['critical'] ) ) {
-			foreach ( $vulns['critical'] as $vuln ) {
-				$summary .= "   - {$vuln['name']} v{$vuln['version']} (needs v{$vuln['fixed_version']}) - {$vuln['severity']}\n";
+		
+		// Separate by severity
+		$critical_vulns = array();
+		$medium_vulns = array();
+		if ( ! empty( $vulns['all'] ) ) {
+			foreach ( $vulns['all'] as $vuln ) {
+				if ( $vuln['severity'] === 'critical' || $vuln['severity'] === 'high' ) {
+					$critical_vulns[] = $vuln;
+				} else {
+					$medium_vulns[] = $vuln;
+				}
+			}
+		}
+		
+		$summary .= "VULNERABILITIES: {$vulns['count']} found (" . count( $critical_vulns ) . " CRITICAL, " . count( $medium_vulns ) . " MEDIUM)\n\n";
+		
+		if ( $vulns['count'] > 0 ) {
+			// CRITICAL
+			$summary .= "CRITICAL (" . count( $critical_vulns ) . "):\n";
+			if ( count( $critical_vulns ) > 0 ) {
+				foreach ( array_slice( $critical_vulns, 0, 3 ) as $vuln ) {
+					$summary .= "- {$vuln['name']} {$vuln['version']} → {$vuln['fixed_version']} ({$vuln['severity']})\n";
+				}
+				if ( count( $critical_vulns ) > 3 ) {
+					$summary .= "... and " . ( count( $critical_vulns ) - 3 ) . " more\n";
+				}
+			} else {
+				$summary .= "(none)\n";
+			}
+			
+			// MEDIUM
+			$summary .= "\nMEDIUM (" . count( $medium_vulns ) . "):\n";
+			if ( count( $medium_vulns ) > 0 ) {
+				foreach ( array_slice( $medium_vulns, 0, 5 ) as $vuln ) {
+					$summary .= "- {$vuln['name']} {$vuln['version']} → {$vuln['fixed_version']}\n";
+				}
+				if ( count( $medium_vulns ) > 5 ) {
+					$summary .= "... and " . ( count( $medium_vulns ) - 5 ) . " more\n";
+				}
+			} else {
+				$summary .= "(none)\n";
 			}
 		} else {
-			$summary .= "   All plugins/themes up to date\n";
+			$summary .= "All plugins/themes up to date\n";
 		}
 		$summary .= "\n";
 
 		// 4. LOGIN ACTIVITY
 		$login = self::get_login_activity( $days );
-		$summary .= "LOGIN ATTEMPTS: {$login['total']} ({$login['failed']} failed)\n";
+		$summary .= "LOGIN ATTEMPTS: {$login['total']} ({$login['failed']} failed, " . ( $login['total'] - $login['failed'] ) . " successful)\n\n";
 		if ( $login['failed'] > 0 && ! empty( $login['failed_details'] ) ) {
-			$summary .= "   Failed attempts:\n";
+			$summary .= "Failed attempts (top 5):\n";
 			foreach ( $login['failed_details'] as $attempt ) {
-				$summary .= "   - {$attempt['username']} from {$attempt['ip']} ({$attempt['count']}x)\n";
+				$summary .= "- \"{$attempt['username']}\" from {$attempt['ip']} ({$attempt['count']} attempts)\n";
 			}
+			$summary .= "\nInterpretation: Failed attempts are normal bot activity. Firewall blocking effectively. 1000+ failed = working protection (good).\n";
 		} else {
-			$summary .= "   All login attempts successful\n";
+			$summary .= "All login attempts successful\n";
 		}
 		$summary .= "\n";
 
-		// 5. FIREWALL BLOCKS - SHOW ATTACK TYPES
+		// 5. FIREWALL BLOCKS
 		$firewall = self::get_firewall_blocks( $days );
-		$summary .= "FIREWALL BLOCKS: {$firewall['count']} attacks blocked\n";
+		$summary .= "FIREWALL BLOCKS: {$firewall['count']} attacks (last 24h)\n\n";
 		if ( $firewall['count'] > 0 && ! empty( $firewall['details'] ) ) {
-			foreach ( $firewall['details'] as $idx => $block ) {
-				if ( $idx >= 6 ) break; // Limit to 6
-				$summary .= "   - {$block['reason']}: {$block['uri']}\n";
+			// Count attack types
+			$attack_types = array();
+			foreach ( $firewall['details'] as $block ) {
+				$reason = $block['reason'];
+				if ( ! isset( $attack_types[ $reason ] ) ) {
+					$attack_types[ $reason ] = 0;
+				}
+				$attack_types[ $reason ]++;
 			}
-			if ( $firewall['count'] > 6 ) {
-				$summary .= "   ... and " . ( $firewall['count'] - 6 ) . " more attacks\n";
+			
+			$summary .= "Attack types:\n";
+			foreach ( $attack_types as $type => $count ) {
+				$summary .= "- {$type}: {$count}\n";
 			}
+			$summary .= "\nInterpretation: Blocks are good - firewall protecting site. 1-100/day = normal, 1000+ = active attack.\n";
 		} elseif ( $firewall['count'] > 0 ) {
-			$summary .= "   WARNING: {$firewall['count']} malicious requests blocked\n";
+			$summary .= "Attacks blocked\n";
+			$summary .= "\nInterpretation: Blocks are good - firewall protecting site.\n";
 		} else {
-			$summary .= "   No attacks detected\n";
+			$summary .= "No attacks detected\n";
 		}
 		$summary .= "\n";
 
@@ -121,57 +285,70 @@ class Bearmor_Summary_Builder {
 			$summary .= "\n";
 		}
 
-		// 7. LOGIN ANOMALIES - SHOW ACTUAL ANOMALIES
+		// 7. LOGIN ANOMALIES
 		$anomalies = self::get_login_anomalies( $days );
 		if ( $anomalies['count'] > 0 ) {
-			$summary .= "LOGIN ANOMALIES: {$anomalies['count']} unusual patterns\n";
+			$summary .= "LOGIN ANOMALIES: {$anomalies['count']} pattern detected\n\n";
 			if ( ! empty( $anomalies['details'] ) ) {
 				foreach ( $anomalies['details'] as $idx => $anomaly ) {
-					if ( $idx >= 5 ) break; // Limit to 5
-					$summary .= "   - {$anomaly['anomaly_type']}: {$anomaly['description']}\n";
+					if ( $idx >= 3 ) break; // Limit to 3
+					$summary .= ( $idx + 1 ) . ". {$anomaly['anomaly_type']}\n";
+					$summary .= "   {$anomaly['description']}\n";
 				}
+				$summary .= "\nInterpretation: New country logins may indicate compromise.\n";
 			} else {
-				$summary .= "   Unusual login patterns detected - review Security Logs\n";
+				$summary .= "Unusual login patterns detected - review Security Logs\n";
 			}
 			$summary .= "\n";
 		}
 
-		// 8. DEEP SCAN RESULTS - DATABASE & UPLOADS
+		// 8. DEEP SCAN RESULTS
 		$deep_scan = self::get_deep_scan_results();
 		if ( $deep_scan['total'] > 0 ) {
-			$summary .= "DEEP SCAN THREATS: {$deep_scan['total']} threats found\n";
+			$summary .= "DEEP SCAN THREATS: {$deep_scan['total']} found ({$deep_scan['database']['count']} database, {$deep_scan['uploads']['count']} files)\n\n";
 			
 			// Database threats
 			if ( $deep_scan['database']['count'] > 0 ) {
-				$summary .= "   Database: {$deep_scan['database']['count']} infected entries\n";
+				$summary .= "DATABASE ({$deep_scan['database']['count']}):\n";
 				if ( ! empty( $deep_scan['database']['details'] ) ) {
 					foreach ( $deep_scan['database']['details'] as $idx => $threat ) {
-						if ( $idx >= 5 ) break; // Limit to 5
+						if ( $idx >= 3 ) break; // Limit to 3
 						$location = ! empty( $threat['location'] ) ? $threat['location'] : $threat['item_type'];
 						$pattern = ! empty( $threat['pattern'] ) ? $threat['pattern'] : 'Unknown';
-						$summary .= "      - {$location}: {$pattern}\n";
+						$summary .= ( $idx + 1 ) . ". {$location}\n";
+						$summary .= "   Pattern: {$pattern}\n";
+						if ( ! empty( $threat['matched_code'] ) ) {
+							$preview = substr( $threat['matched_code'], 0, 60 );
+							$summary .= "   Preview: {$preview}...\n";
+						}
 					}
-					if ( $deep_scan['database']['count'] > 5 ) {
-						$summary .= "      ... and " . ( $deep_scan['database']['count'] - 5 ) . " more database threats\n";
+					if ( $deep_scan['database']['count'] > 3 ) {
+						$summary .= "... and " . ( $deep_scan['database']['count'] - 3 ) . " more\n";
 					}
 				}
 			}
 			
 			// Uploads threats
 			if ( $deep_scan['uploads']['count'] > 0 ) {
-				$summary .= "   Uploads: {$deep_scan['uploads']['count']} malicious files\n";
+				$summary .= "\nUPLOADS ({$deep_scan['uploads']['count']}):\n";
 				if ( ! empty( $deep_scan['uploads']['details'] ) ) {
 					foreach ( $deep_scan['uploads']['details'] as $idx => $threat ) {
-						if ( $idx >= 5 ) break; // Limit to 5
-						$file = basename( $threat['location'] );
+						if ( $idx >= 3 ) break; // Limit to 3
 						$pattern = ! empty( $threat['pattern'] ) ? $threat['pattern'] : 'Suspicious file';
-						$summary .= "      - {$file}: {$pattern}\n";
+						$summary .= ( $idx + 1 ) . ". {$threat['location']}\n";
+						if ( ! empty( $threat['matched_code'] ) ) {
+							$size = strlen( $threat['matched_code'] );
+							$preview = substr( $threat['matched_code'], 0, 40 );
+							$summary .= "   Size: {$size} bytes\n";
+							$summary .= "   Content: {$preview}...\n";
+						}
 					}
-					if ( $deep_scan['uploads']['count'] > 5 ) {
-						$summary .= "      ... and " . ( $deep_scan['uploads']['count'] - 5 ) . " more malicious files\n";
+					if ( $deep_scan['uploads']['count'] > 3 ) {
+						$summary .= "... and " . ( $deep_scan['uploads']['count'] - 3 ) . " more\n";
 					}
 				}
 			}
+			$summary .= "\nNote: \"Silence is golden\" files are WordPress placeholders (safe). PHP in plugin folders often legitimate.\n";
 			$summary .= "\n";
 		}
 
@@ -388,7 +565,8 @@ class Bearmor_Summary_Builder {
 			WHERE status = 'open'"
 		);
 
-		$critical = $wpdb->get_results(
+		// Get ALL vulnerabilities, not just top 3
+		$all = $wpdb->get_results(
 			"SELECT item_name as name, current_version as version, fixed_version, severity 
 			FROM {$wpdb->prefix}bearmor_vulnerabilities 
 			WHERE status = 'open'
@@ -398,14 +576,13 @@ class Bearmor_Summary_Builder {
 					WHEN 'high' THEN 2 
 					WHEN 'medium' THEN 3 
 					ELSE 4 
-				END
-			LIMIT 3",
+				END",
 			ARRAY_A
 		);
 
 		return array(
-			'count'    => intval( $count ),
-			'critical' => $critical,
+			'count' => intval( $count ),
+			'all'   => $all,
 		);
 	}
 

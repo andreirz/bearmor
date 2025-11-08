@@ -83,14 +83,25 @@ class Bearmor_AI_Analyzer {
 		// Build the full prompt with instructions
 		$is_pro = class_exists( 'Bearmor_License' ) && Bearmor_License::is_pro();
 		
-		$system_message = "You are a friendly, helpful WordPress security advisor. Your job is to help shop owners understand their site security in simple, non-technical language. Be reassuring and positive. Remember: firewall blocks, failed logins, and login anomalies are GOOD - they mean the plugin is protecting the site. ALWAYS include [SCORE: XX] in your response.";
+		$system_message = "You are a WordPress security analyst. Analyze the data critically and provide accurate assessment. ALWAYS include [SCORE: XX] in your response.";
 		
-		$user_prompt = "Based on the security data below, provide a brief assessment (max 150 words).\n\n";
-		$user_prompt .= "IMPORTANT: Include [SCORE: XX] where XX is 0-50 points based on:\n";
-		$user_prompt .= "- Malware/threats = major deduction\n";
-		$user_prompt .= "- Vulnerabilities = deduction\n";
-		$user_prompt .= "- Firewall blocks, failed logins = GOOD (no deduction)\n";
-		$user_prompt .= "- File changes from updates = normal (no deduction)\n\n";
+		$user_prompt = "SECURITY ANALYSIS INSTRUCTIONS:\n\n";
+		$user_prompt .= "Do not blindly trust threat counts - analyze context:\n";
+		$user_prompt .= "- base64_decode in JWT/OAuth/API plugins = legitimate\n";
+		$user_prompt .= "- \"Silence is golden\" PHP files = WordPress placeholders (safe)\n";
+		$user_prompt .= "- Failed login attempts = firewall working (good)\n";
+		$user_prompt .= "- Firewall blocks = protection active (good)\n";
+		$user_prompt .= "- File changes in plugins/themes = normal updates\n";
+		$user_prompt .= "- Core file changes or unusual uploads = critical\n\n";
+		$user_prompt .= "SCORING (max 50 points from AI):\n";
+		$user_prompt .= "- 0 HIGH threats + working firewall = 45-50 points\n";
+		$user_prompt .= "- 1-5 HIGH threats = 30-40 points\n";
+		$user_prompt .= "- 10+ HIGH threats = 10-20 points\n";
+		$user_prompt .= "- 50+ HIGH threats = 0-10 points\n";
+		$user_prompt .= "- MEDIUM threats are informational, don't heavily penalize\n";
+		$user_prompt .= "- Deduct for: core file changes, PHP in uploads, critical vulnerabilities\n";
+		$user_prompt .= "- Bonus for: active firewall, recent updates, no anomalies\n\n";
+		$user_prompt .= "Provide brief assessment (max 150 words). Include [SCORE: XX].\n\n";
 		$user_prompt .= $summary;
 
 		// Call bearmor-home AI endpoint
