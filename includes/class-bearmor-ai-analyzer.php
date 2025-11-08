@@ -327,12 +327,16 @@ class Bearmor_AI_Analyzer {
 			$insert_formats[] = '%s';
 		}
 		
+		// Log data sizes before insert
+		error_log( 'BEARMOR AI: Data sizes - summary_data: ' . strlen( $insert_data['summary_data'] ) . ' bytes, ai_prompt: ' . strlen( $insert_data['ai_prompt'] ) . ' bytes' );
+		
 		$result = $wpdb->insert( $table_name, $insert_data, $insert_formats );
 		
 		if ( $result === false ) {
-			error_log( 'Bearmor AI Analysis Save Error: ' . $wpdb->last_error );
+			error_log( 'BEARMOR AI: Save failed - MySQL Error: ' . $wpdb->last_error );
+			error_log( 'BEARMOR AI: Last query: ' . $wpdb->last_query );
 		} else {
-			error_log( 'Bearmor AI Analysis Saved: ID ' . $wpdb->insert_id );
+			error_log( 'BEARMOR AI: Analysis saved successfully - ID: ' . $wpdb->insert_id );
 		}
 	}
 
