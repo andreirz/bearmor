@@ -249,25 +249,26 @@ class Bearmor_Summary_Builder {
 		// 5. FIREWALL BLOCKS
 		$firewall = self::get_firewall_blocks( $days );
 		$summary .= "FIREWALL BLOCKS: {$firewall['count']} attacks (last 24h)\n\n";
-		if ( $firewall['count'] > 0 && ! empty( $firewall['details'] ) ) {
-			// Count attack types
-			$attack_types = array();
-			foreach ( $firewall['details'] as $block ) {
-				$reason = $block['reason'];
-				if ( ! isset( $attack_types[ $reason ] ) ) {
-					$attack_types[ $reason ] = 0;
+		if ( $firewall['count'] > 0 ) {
+			if ( ! empty( $firewall['details'] ) ) {
+				// Count attack types
+				$attack_types = array();
+				foreach ( $firewall['details'] as $block ) {
+					$reason = ! empty( $block['reason'] ) ? $block['reason'] : 'Unknown';
+					if ( ! isset( $attack_types[ $reason ] ) ) {
+						$attack_types[ $reason ] = 0;
+					}
+					$attack_types[ $reason ]++;
 				}
-				$attack_types[ $reason ]++;
-			}
-			
-			$summary .= "Attack types:\n";
-			foreach ( $attack_types as $type => $count ) {
-				$summary .= "- {$type}: {$count}\n";
+				
+				$summary .= "Attack types:\n";
+				foreach ( $attack_types as $type => $count ) {
+					$summary .= "- {$type}: {$count}\n";
+				}
+			} else {
+				$summary .= "{$firewall['count']} malicious requests blocked\n";
 			}
 			$summary .= "\nInterpretation: Blocks are good - firewall protecting site. 1-100/day = normal, 1000+ = active attack.\n";
-		} elseif ( $firewall['count'] > 0 ) {
-			$summary .= "Attacks blocked\n";
-			$summary .= "\nInterpretation: Blocks are good - firewall protecting site.\n";
 		} else {
 			$summary .= "No attacks detected\n";
 		}
@@ -562,14 +563,14 @@ class Bearmor_Summary_Builder {
 		
 		$count = $wpdb->get_var(
 			"SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_vulnerabilities 
-			WHERE status = 'open'"
+			WHERE status = 'active'"
 		);
 
 		// Get ALL vulnerabilities, not just top 3
 		$all = $wpdb->get_results(
-			"SELECT item_name as name, current_version as version, fixed_version, severity 
+			"SELECT item_name as name, item_version as version, fixed_in as fixed_version, severity 
 			FROM {$wpdb->prefix}bearmor_vulnerabilities 
-			WHERE status = 'open'
+			WHERE status = 'active'
 			ORDER BY 
 				CASE severity 
 					WHEN 'critical' THEN 1 
