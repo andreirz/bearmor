@@ -3,7 +3,7 @@
  * Plugin Name: Bearmor Security
  * Plugin URI: https://bearmor.com
  * Description: Lightweight, robust WordPress security plugin for SMBs.
- * Version: 0.7.0
+ * Version: 0.7.1
  * Author: Bearmor Security Team
  * Author URI: https://bearmor.com
  * License: GPL v2 or later
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'BEARMOR_VERSION', '0.7.0' );
+define( 'BEARMOR_VERSION', '0.7.1' );
 define( 'BEARMOR_DB_VERSION', '1.3' ); // Database schema version
 define( 'BEARMOR_PLUGIN_FILE', __FILE__ );
 define( 'BEARMOR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -937,8 +937,8 @@ function bearmor_admin_bar_menu( $wp_admin_bar ) {
 
 	global $wpdb;
 	
-	// Get threat counts
-	$malware_count = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_malware_detections" );
+	// Get threat counts (only HIGH severity malware)
+	$malware_count = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_malware_detections WHERE severity = 'high'" );
 	$file_changes = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_file_changes WHERE status != 'safe'" );
 	
 	$total_threats = intval( $malware_count ) + intval( $file_changes );
@@ -961,12 +961,12 @@ function bearmor_admin_bar_menu( $wp_admin_bar ) {
 		),
 	) );
 	
-	// Add submenu items
+	// Add submenu items (only show if HIGH severity threats exist)
 	if ( $malware_count > 0 ) {
 		$wp_admin_bar->add_node( array(
 			'parent' => 'bearmor-security',
 			'id'     => 'bearmor-malware',
-			'title'  => sprintf( '⚠️ Malware Threats (%d)', $malware_count ),
+			'title'  => sprintf( '⚠️ High Risk Threats (%d)', $malware_count ),
 			'href'   => admin_url( 'admin.php?page=bearmor-malware-alerts' ),
 		) );
 	}
