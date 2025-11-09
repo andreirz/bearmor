@@ -3,7 +3,7 @@
  * Plugin Name: Bearmor Security
  * Plugin URI: https://bearmor.com
  * Description: Lightweight, robust WordPress security plugin for SMBs.
- * Version: 0.6.8
+ * Version: 0.6.9
  * Author: Bearmor Security Team
  * Author URI: https://bearmor.com
  * License: GPL v2 or later
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'BEARMOR_VERSION', '0.6.8' );
+define( 'BEARMOR_VERSION', '0.6.9' );
 define( 'BEARMOR_DB_VERSION', '1.2' ); // Database schema version
 define( 'BEARMOR_PLUGIN_FILE', __FILE__ );
 define( 'BEARMOR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -828,7 +828,7 @@ function bearmor_admin_menu() {
 		'bearmor-security',
 		'bearmor_dashboard_page',
 		'dashicons-shield',
-		80
+		999 // Always appear at bottom of menu
 	);
 
 	add_submenu_page(
@@ -914,6 +914,61 @@ function bearmor_admin_menu() {
 	);
 }
 add_action( 'admin_menu', 'bearmor_admin_menu' );
+
+/**
+ * Add admin bar node with threat count
+ */
+function bearmor_admin_bar_menu( $wp_admin_bar ) {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+
+	global $wpdb;
+	
+	// Get threat counts
+	$malware_count = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_malware_detections" );
+	$file_changes = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_file_changes WHERE status != 'safe'" );
+	
+	$total_threats = intval( $malware_count ) + intval( $file_changes );
+	
+	// Determine icon and color
+	if ( $total_threats > 0 ) {
+		$icon = '🔴';
+		$title = sprintf( 'Bearmor %s %d', $icon, $total_threats );
+	} else {
+		$icon = '🟢';
+		$title = sprintf( 'Bearmor %s', $icon );
+	}
+	
+	$wp_admin_bar->add_node( array(
+		'id'    => 'bearmor-security',
+		'title' => $title,
+		'href'  => admin_url( 'admin.php?page=bearmor-security' ),
+		'meta'  => array(
+			'title' => __( 'Bearmor Security Dashboard', 'bearmor-security' ),
+		),
+	) );
+	
+	// Add submenu items
+	if ( $malware_count > 0 ) {
+		$wp_admin_bar->add_node( array(
+			'parent' => 'bearmor-security',
+			'id'     => 'bearmor-malware',
+			'title'  => sprintf( '⚠️ Malware Threats (%d)', $malware_count ),
+			'href'   => admin_url( 'admin.php?page=bearmor-malware-alerts' ),
+		) );
+	}
+	
+	if ( $file_changes > 0 ) {
+		$wp_admin_bar->add_node( array(
+			'parent' => 'bearmor-security',
+			'id'     => 'bearmor-changes',
+			'title'  => sprintf( '📝 File Changes (%d)', $file_changes ),
+			'href'   => admin_url( 'admin.php?page=bearmor-file-changes' ),
+		) );
+	}
+}
+add_action( 'admin_bar_menu', 'bearmor_admin_bar_menu', 999 );
 
 /**
  * Hide admin notices on Bearmor pages
