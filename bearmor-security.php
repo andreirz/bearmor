@@ -3,7 +3,7 @@
  * Plugin Name: Bearmor Security
  * Plugin URI: https://bearmor.com
  * Description: Lightweight, robust WordPress security plugin for SMBs.
- * Version: 0.6.9
+ * Version: 0.7.0
  * Author: Bearmor Security Team
  * Author URI: https://bearmor.com
  * License: GPL v2 or later
@@ -19,8 +19,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'BEARMOR_VERSION', '0.6.9' );
-define( 'BEARMOR_DB_VERSION', '1.2' ); // Database schema version
+define( 'BEARMOR_VERSION', '0.7.0' );
+define( 'BEARMOR_DB_VERSION', '1.3' ); // Database schema version
 define( 'BEARMOR_PLUGIN_FILE', __FILE__ );
 define( 'BEARMOR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BEARMOR_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -387,6 +387,18 @@ function bearmor_activate() {
 		status VARCHAR(50) DEFAULT 'open',
 		synced_at DATETIME NOT NULL,
 		KEY idx_start_time (start_time),
+		KEY idx_status (status)
+	) $charset_collate;";
+	dbDelta( $sql );
+	
+	// Uptime pings table (stores all ping results from Home)
+	$sql = "CREATE TABLE {$wpdb->prefix}bearmor_uptime_pings (
+		id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+		status VARCHAR(10) NOT NULL,
+		response_time INT NOT NULL,
+		pinged_at DATETIME NOT NULL,
+		synced_at DATETIME NOT NULL,
+		KEY idx_pinged_at (pinged_at),
 		KEY idx_status (status)
 	) $charset_collate;";
 	dbDelta( $sql );
@@ -1599,6 +1611,157 @@ function bearmor_ajax_generate_pdf_report() {
 		'file'    => basename( $result ),
 		'url'     => admin_url( 'admin-ajax.php?action=bearmor_download_pdf&file=' . basename( $result ) )
 	) );
+}
+
+/**
+ * AJAX handler for uptime history
+ */
+add_action( 'wp_ajax_bearmor_get_uptime_history', 'bearmor_ajax_get_uptime_history' );
+function bearmor_ajax_get_uptime_history() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => 'Access denied' ) );
+	}
+	
+	global $wpdb;
+	
+	// Get downtime events for last 30 days
+	$thirty_days_ago = date( 'Y-m-d H:i:s', strtotime( '-30 days' ) );
+	$downtime_events = $wpdb->get_results( $wpdb->prepare(
+		"SELECT * FROM {$wpdb->prefix}bearmor_uptime_history 
+		WHERE start_time >= %s 
+		ORDER BY start_time DESC",
+		$thirty_days_ago
+	) );
+	
+	// Get daily uptime stats for last 30 days
+	$daily_stats = array();
+	for ( $i = 29; $i >= 0; $i-- ) {
+		$date = date( 'Y-m-d', strtotime( "-$i days" ) );
+		$day_start = date( 'Y-m-d 00:00:00', strtotime( "-$i days" ) );
+		$day_end = date( 'Y-m-d 23:59:59', strtotime( "-$i days" ) );
+		
+		$total_pings = $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_uptime_pings 
+			WHERE pinged_at >= %s AND pinged_at <= %s",
+			$day_start,
+			$day_end
+		) );
+		
+		$up_pings = $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_uptime_pings 
+			WHERE pinged_at >= %s AND pinged_at <= %s AND status = 'up'",
+			$day_start,
+			$day_end
+		) );
+		
+		$uptime_percent = $total_pings > 0 ? round( ( $up_pings / $total_pings ) * 100, 2 ) : 100;
+		
+		$daily_stats[] = array(
+			'date'    => $date,
+			'uptime'  => $uptime_percent,
+			'checks'  => $total_pings,
+		);
+	}
+	
+	// Generate HTML
+	ob_start();
+	?>
+	<div style="margin-bottom: 30px;">
+		<h3 style="margin-bottom: 15px;">Daily Uptime (Last 30 Days)</h3>
+		<table class="wp-list-table widefat fixed striped" style="font-size: 12px;">
+			<thead>
+				<tr>
+					<th>Date</th>
+					<th>Uptime %</th>
+					<th>Checks</th>
+					<th>Status</th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach ( $daily_stats as $stat ) : ?>
+					<?php
+					$status_color = $stat['uptime'] >= 99 ? '#00a32a' : ( $stat['uptime'] >= 95 ? '#f0b849' : '#d63638' );
+					?>
+					<tr>
+						<td><?php echo esc_html( date( 'M d, Y', strtotime( $stat['date'] ) ) ); ?></td>
+						<td><strong style="color: <?php echo esc_attr( $status_color ); ?>;"><?php echo esc_html( $stat['uptime'] ); ?>%</strong></td>
+						<td><?php echo esc_html( $stat['checks'] ); ?> pings</td>
+						<td>
+							<?php if ( $stat['uptime'] >= 99 ) : ?>
+								<span style="color: #00a32a;">✓ Excellent</span>
+							<?php elseif ( $stat['uptime'] >= 95 ) : ?>
+								<span style="color: #f0b849;">⚠ Good</span>
+							<?php else : ?>
+								<span style="color: #d63638;">✗ Issues</span>
+							<?php endif; ?>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+	</div>
+	
+	<?php if ( ! empty( $downtime_events ) ) : ?>
+		<div>
+			<h3 style="margin-bottom: 15px;">Downtime Events (<?php echo count( $downtime_events ); ?>)</h3>
+			<table class="wp-list-table widefat fixed striped" style="font-size: 12px;">
+				<thead>
+					<tr>
+						<th>Started</th>
+						<th>Ended</th>
+						<th>Duration</th>
+						<th>Status</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ( $downtime_events as $event ) : ?>
+						<tr>
+							<td><?php echo esc_html( date( 'M d, Y H:i', strtotime( $event->start_time ) ) ); ?></td>
+							<td>
+								<?php 
+								if ( $event->end_time ) {
+									echo esc_html( date( 'M d, Y H:i', strtotime( $event->end_time ) ) );
+								} else {
+									echo '<span style="color: #d63638;">Ongoing</span>';
+								}
+								?>
+							</td>
+							<td>
+								<?php 
+								if ( $event->duration_minutes ) {
+									$hours = floor( $event->duration_minutes / 60 );
+									$mins = $event->duration_minutes % 60;
+									if ( $hours > 0 ) {
+										echo esc_html( $hours . 'h ' . $mins . 'm' );
+									} else {
+										echo esc_html( $mins . ' min' );
+									}
+								} else {
+									echo '-';
+								}
+								?>
+							</td>
+							<td>
+								<?php if ( $event->status === 'closed' ) : ?>
+									<span style="color: #00a32a;">✓ Resolved</span>
+								<?php else : ?>
+									<span style="color: #d63638;">⚠ Open</span>
+								<?php endif; ?>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+		</div>
+	<?php else : ?>
+		<p style="text-align: center; color: #00a32a; font-size: 16px; padding: 40px;">
+			✓ No downtime events in the last 30 days!
+		</p>
+	<?php endif; ?>
+	<?php
+	$html = ob_get_clean();
+	
+	wp_send_json_success( array( 'html' => $html ) );
 }
 
 /**

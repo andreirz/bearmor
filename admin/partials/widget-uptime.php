@@ -24,29 +24,32 @@ if ( $is_pro && class_exists( 'Bearmor_Uptime_Sync' ) ) {
 	$uptime_stats = Bearmor_Uptime_Sync::get_uptime_stats();
 }
 
-// Generate 7-day uptime data for chart (calculate per day from downtime_events)
+// Generate 7-day uptime data for chart (calculate per day from actual pings)
 $chart_data = array();
 $chart_labels = array();
+
+global $wpdb;
 for ( $i = 6; $i >= 0; $i-- ) {
 	$date = date( 'M d', strtotime( "-$i days" ) );
-	$day_start = strtotime( date( 'Y-m-d', strtotime( "-$i days" ) ) );
-	$day_end = $day_start + 86400;
+	$day_start = date( 'Y-m-d 00:00:00', strtotime( "-$i days" ) );
+	$day_end = date( 'Y-m-d 23:59:59', strtotime( "-$i days" ) );
 	
-	// Calculate uptime for this day
-	$day_downtime = 0;
-	foreach ( $uptime_stats['downtime_events'] as $event ) {
-		$event_start = strtotime( $event->start_time );
-		$event_end = $event->end_time ? strtotime( $event->end_time ) : time();
-		
-		// Check if event overlaps with this day
-		if ( $event_start < $day_end && $event_end > $day_start ) {
-			$overlap_start = max( $event_start, $day_start );
-			$overlap_end = min( $event_end, $day_end );
-			$day_downtime += $overlap_end - $overlap_start;
-		}
-	}
+	// Count pings for this day
+	$total_pings = $wpdb->get_var( $wpdb->prepare(
+		"SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_uptime_pings 
+		WHERE pinged_at >= %s AND pinged_at <= %s",
+		$day_start,
+		$day_end
+	) );
 	
-	$day_uptime = max( 0, 100 - round( ( $day_downtime / 86400 ) * 100, 0 ) );
+	$up_pings = $wpdb->get_var( $wpdb->prepare(
+		"SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_uptime_pings 
+		WHERE pinged_at >= %s AND pinged_at <= %s AND status = 'up'",
+		$day_start,
+		$day_end
+	) );
+	
+	$day_uptime = $total_pings > 0 ? round( ( $up_pings / $total_pings ) * 100, 0 ) : 100;
 	$chart_labels[] = $date;
 	$chart_data[] = $day_uptime;
 }
@@ -90,19 +93,39 @@ if ( ! empty( $uptime_stats['downtime_events'] ) ) {
 			
 			<script>
 				(function() {
+					// Ensure chart data is ready
+					var chartData = <?php echo wp_json_encode( $chart_data ); ?>;
+					var chartLabels = <?php echo wp_json_encode( $chart_labels ); ?>;
+					
 					// Load ApexCharts if not already loaded
 					if ( typeof ApexCharts === 'undefined' ) {
 						var script = document.createElement( 'script' );
 						script.src = 'https://cdn.jsdelivr.net/npm/apexcharts@3.45.0/dist/apexcharts.min.js';
 						script.onload = function() {
-							drawChart();
+							// Wait for DOM to be ready
+							if ( document.readyState === 'loading' ) {
+								document.addEventListener( 'DOMContentLoaded', drawChart );
+							} else {
+								drawChart();
+							}
 						};
 						document.head.appendChild( script );
 					} else {
-						drawChart();
+						// Wait for DOM to be ready
+						if ( document.readyState === 'loading' ) {
+							document.addEventListener( 'DOMContentLoaded', drawChart );
+						} else {
+							drawChart();
+						}
 					}
 					
 					function drawChart() {
+						// Verify element exists
+						var chartElement = document.querySelector( '#bearmor-uptime-chart' );
+						if ( ! chartElement ) {
+							console.error( 'Bearmor: Chart element not found' );
+							return;
+						}
 						var options = {
 							chart: {
 								type: 'bar',
@@ -125,10 +148,10 @@ if ( ! empty( $uptime_stats['downtime_events'] ) ) {
 							},
 							series: [{
 								name: 'Uptime %',
-								data: <?php echo wp_json_encode( $chart_data ); ?>
+								data: chartData
 							}],
 							xaxis: {
-								categories: <?php echo wp_json_encode( $chart_labels ); ?>,
+								categories: chartLabels,
 								axisBorder: {
 									show: false
 								},
@@ -193,9 +216,66 @@ if ( ! empty( $uptime_stats['downtime_events'] ) ) {
 					</p>
 				</div>
 			<?php endif; ?>
+			
+			<div style="text-align: center; margin-top: 10px;">
+				<button class="button button-secondary" onclick="bearmorShowUptimeHistory()" style="font-size: 11px;">
+					📊 View History
+				</button>
+			</div>
 		<?php else : ?>
 			<p class="bearmor-widget-description">24/7 uptime monitoring with instant alerts</p>
 			<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-settings' ) ); ?>" class="bearmor-widget-action bearmor-upgrade-btn">Upgrade to Pro</a>
 		<?php endif; ?>
 	</div>
 </div>
+
+<!-- Uptime History Modal -->
+<div id="bearmor-uptime-history-modal" style="display: none; position: fixed; z-index: 999999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+	<div style="background-color: #fff; margin: 5% auto; padding: 20px; border-radius: 8px; width: 80%; max-width: 900px; max-height: 80vh; overflow-y: auto;">
+		<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+			<h2 style="margin: 0;">📊 Uptime History (Last 30 Days)</h2>
+			<button onclick="bearmorCloseUptimeHistory()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+		</div>
+		
+		<div id="bearmor-uptime-history-content">
+			<p style="text-align: center; padding: 40px;">Loading history...</p>
+		</div>
+	</div>
+</div>
+
+<script>
+function bearmorShowUptimeHistory() {
+	document.getElementById('bearmor-uptime-history-modal').style.display = 'block';
+	
+	// Fetch uptime history via AJAX
+	jQuery.ajax({
+		url: ajaxurl,
+		type: 'POST',
+		data: {
+			action: 'bearmor_get_uptime_history'
+		},
+		success: function(response) {
+			if (response.success) {
+				document.getElementById('bearmor-uptime-history-content').innerHTML = response.data.html;
+			} else {
+				document.getElementById('bearmor-uptime-history-content').innerHTML = '<p style="color: red;">Failed to load history.</p>';
+			}
+		},
+		error: function() {
+			document.getElementById('bearmor-uptime-history-content').innerHTML = '<p style="color: red;">Error loading history.</p>';
+		}
+	});
+}
+
+function bearmorCloseUptimeHistory() {
+	document.getElementById('bearmor-uptime-history-modal').style.display = 'none';
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+	var modal = document.getElementById('bearmor-uptime-history-modal');
+	if (event.target === modal) {
+		bearmorCloseUptimeHistory();
+	}
+});
+</script>

@@ -69,11 +69,41 @@ class Bearmor_Uptime_Sync {
 	}
 
 	/**
-	 * Store downtime events in local database
+	 * Store all pings and downtime events in local database
 	 */
 	private static function store_downtime_events( $uptime_data ) {
 		global $wpdb;
 		
+		// Store all pings (NEW)
+		if ( ! empty( $uptime_data['pings'] ) ) {
+			// Clear old pings (keep last 7 days only)
+			$wpdb->query( "DELETE FROM {$wpdb->prefix}bearmor_uptime_pings WHERE pinged_at < DATE_SUB(NOW(), INTERVAL 7 DAY)" );
+			
+			foreach ( $uptime_data['pings'] as $ping ) {
+				// Check if ping already exists
+				$existing = $wpdb->get_var( $wpdb->prepare(
+					"SELECT id FROM {$wpdb->prefix}bearmor_uptime_pings 
+					WHERE pinged_at = %s",
+					$ping->pinged_at
+				) );
+				
+				if ( ! $existing ) {
+					// Insert new ping
+					$wpdb->insert(
+						$wpdb->prefix . 'bearmor_uptime_pings',
+						array(
+							'status'        => $ping->status,
+							'response_time' => $ping->response_time,
+							'pinged_at'     => $ping->pinged_at,
+							'synced_at'     => current_time( 'mysql' ),
+						),
+						array( '%s', '%d', '%s', '%s' )
+					);
+				}
+			}
+		}
+		
+		// Store downtime events (existing logic)
 		if ( empty( $uptime_data['downtime_events'] ) ) {
 			return;
 		}
@@ -83,7 +113,7 @@ class Bearmor_Uptime_Sync {
 			$existing = $wpdb->get_row( $wpdb->prepare(
 				"SELECT id FROM {$wpdb->prefix}bearmor_uptime_history 
 				WHERE start_time = %s",
-				$event['start_time']
+				$event->start_time
 			) );
 			
 			if ( $existing ) {
@@ -91,12 +121,12 @@ class Bearmor_Uptime_Sync {
 				$wpdb->update(
 					$wpdb->prefix . 'bearmor_uptime_history',
 					array(
-						'end_time'         => isset( $event['end_time'] ) ? $event['end_time'] : null,
-						'duration_minutes' => isset( $event['duration_minutes'] ) ? $event['duration_minutes'] : null,
-						'status'           => isset( $event['status'] ) ? $event['status'] : 'open',
+						'end_time'         => isset( $event->end_time ) ? $event->end_time : null,
+						'duration_minutes' => isset( $event->duration_minutes ) ? $event->duration_minutes : null,
+						'status'           => isset( $event->status ) ? $event->status : 'open',
 						'synced_at'        => current_time( 'mysql' ),
 					),
-					array( 'start_time' => $event['start_time'] ),
+					array( 'start_time' => $event->start_time ),
 					array( '%s', '%d', '%s', '%s' ),
 					array( '%s' )
 				);
@@ -107,10 +137,10 @@ class Bearmor_Uptime_Sync {
 			$wpdb->insert(
 				$wpdb->prefix . 'bearmor_uptime_history',
 				array(
-					'start_time'       => $event['start_time'],
-					'end_time'         => isset( $event['end_time'] ) ? $event['end_time'] : null,
-					'duration_minutes' => isset( $event['duration_minutes'] ) ? $event['duration_minutes'] : null,
-					'status'           => isset( $event['status'] ) ? $event['status'] : 'open',
+					'start_time'       => $event->start_time,
+					'end_time'         => isset( $event->end_time ) ? $event->end_time : null,
+					'duration_minutes' => isset( $event->duration_minutes ) ? $event->duration_minutes : null,
+					'status'           => isset( $event->status ) ? $event->status : 'open',
 					'synced_at'        => current_time( 'mysql' ),
 				),
 				array( '%s', '%s', '%d', '%s', '%s' )
@@ -126,7 +156,7 @@ class Bearmor_Uptime_Sync {
 		
 		$seven_days_ago = date( 'Y-m-d H:i:s', strtotime( '-7 days' ) );
 		
-		// Get downtime events
+		// Get downtime events (for last downtime display)
 		$downtime_events = $wpdb->get_results( $wpdb->prepare(
 			"SELECT * FROM {$wpdb->prefix}bearmor_uptime_history 
 			WHERE start_time >= %s 
@@ -134,17 +164,28 @@ class Bearmor_Uptime_Sync {
 			$seven_days_ago
 		) );
 		
-		// Calculate total downtime
+		// Calculate uptime from actual pings
+		$total_pings = $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_uptime_pings 
+			WHERE pinged_at >= %s",
+			$seven_days_ago
+		) );
+		
+		$up_pings = $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_uptime_pings 
+			WHERE pinged_at >= %s AND status = 'up'",
+			$seven_days_ago
+		) );
+		
+		$uptime_percent = $total_pings > 0 ? round( ( $up_pings / $total_pings ) * 100, 2 ) : 100;
+		
+		// Calculate total downtime in minutes (for reference)
 		$total_downtime = 0;
 		foreach ( $downtime_events as $event ) {
 			if ( $event->duration_minutes ) {
 				$total_downtime += $event->duration_minutes;
 			}
 		}
-		
-		// Calculate uptime percentage (7 days = 10080 minutes)
-		$total_minutes = 7 * 24 * 60;
-		$uptime_percent = max( 0, 100 - round( ( $total_downtime / $total_minutes ) * 100, 2 ) );
 		
 		return array(
 			'uptime_percent'  => $uptime_percent,
