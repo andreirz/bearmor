@@ -3,7 +3,7 @@
  * Plugin Name: Bearmor Security
  * Plugin URI: https://bearmor.com
  * Description: Lightweight, robust WordPress security plugin for SMBs.
- * Version: 0.7.3
+ * Version: 0.7.4
  * Author: Bearmor Security Team
  * Author URI: https://bearmor.com
  * License: GPL v2 or later
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'BEARMOR_VERSION', '0.7.3' );
+define( 'BEARMOR_VERSION', '0.7.4' );
 define( 'BEARMOR_DB_VERSION', '1.3' ); // Database schema version
 define( 'BEARMOR_PLUGIN_FILE', __FILE__ );
 define( 'BEARMOR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -76,6 +76,14 @@ function bearmor_run_db_migrations( $from_version ) {
 			$wpdb->query( "ALTER TABLE {$wpdb->prefix}bearmor_file_changes 
 				ADD COLUMN change_type VARCHAR(20) DEFAULT 'modified' AFTER file_path" );
 			error_log( 'BEARMOR: Added change_type column' );
+		}
+		
+		// Check and add status to bearmor_file_changes
+		$column_exists = $wpdb->get_results( "SHOW COLUMNS FROM {$wpdb->prefix}bearmor_file_changes LIKE 'status'" );
+		if ( empty( $column_exists ) ) {
+			$wpdb->query( "ALTER TABLE {$wpdb->prefix}bearmor_file_changes 
+				ADD COLUMN status VARCHAR(20) DEFAULT 'pending' AFTER change_type" );
+			error_log( 'BEARMOR: Added status column to file_changes' );
 		}
 		
 		// Check and add timestamp to bearmor_activity_log
@@ -1638,6 +1646,25 @@ function bearmor_ajax_generate_pdf_report() {
 		'file'    => basename( $result ),
 		'url'     => admin_url( 'admin-ajax.php?action=bearmor_download_pdf&file=' . basename( $result ) )
 	) );
+}
+
+/**
+ * AJAX handler for manual uptime sync (for testing)
+ */
+add_action( 'wp_ajax_bearmor_manual_uptime_sync', 'bearmor_ajax_manual_uptime_sync' );
+function bearmor_ajax_manual_uptime_sync() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => 'Access denied' ) );
+	}
+	
+	error_log( 'BEARMOR: Manual uptime sync triggered' );
+	
+	if ( class_exists( 'Bearmor_Uptime_Sync' ) ) {
+		Bearmor_Uptime_Sync::sync_uptime_data();
+		wp_send_json_success( array( 'message' => 'Sync complete. Check error logs.' ) );
+	} else {
+		wp_send_json_error( array( 'message' => 'Uptime sync class not found' ) );
+	}
 }
 
 /**

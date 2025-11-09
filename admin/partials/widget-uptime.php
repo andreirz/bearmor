@@ -221,6 +221,9 @@ if ( ! empty( $uptime_stats['downtime_events'] ) ) {
 				<button class="button button-secondary" onclick="bearmorShowUptimeHistory()" style="font-size: 11px;">
 					📊 View History
 				</button>
+				<button class="button button-secondary" onclick="bearmorManualSync()" style="font-size: 11px; margin-left: 5px;">
+					🔄 Sync Now
+				</button>
 			</div>
 		<?php else : ?>
 			<p class="bearmor-widget-description">24/7 uptime monitoring with instant alerts</p>
@@ -269,6 +272,31 @@ function bearmorShowUptimeHistory() {
 
 function bearmorCloseUptimeHistory() {
 	document.getElementById('bearmor-uptime-history-modal').style.display = 'none';
+}
+
+function bearmorManualSync() {
+	if (!confirm('Trigger manual uptime sync? Check error logs after.')) {
+		return;
+	}
+	
+	jQuery.ajax({
+		url: ajaxurl,
+		type: 'POST',
+		data: {
+			action: 'bearmor_manual_uptime_sync'
+		},
+		success: function(response) {
+			if (response.success) {
+				alert('Sync triggered! Check error logs for details.');
+				location.reload();
+			} else {
+				alert('Sync failed: ' + response.data.message);
+			}
+		},
+		error: function() {
+			alert('AJAX error');
+		}
+	});
 }
 
 // Close modal when clicking outside
