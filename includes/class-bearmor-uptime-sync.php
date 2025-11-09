@@ -74,6 +74,8 @@ class Bearmor_Uptime_Sync {
 	private static function store_downtime_events( $uptime_data ) {
 		global $wpdb;
 		
+		error_log( 'BEARMOR: Storing uptime data. Pings count: ' . ( ! empty( $uptime_data['pings'] ) ? count( $uptime_data['pings'] ) : 0 ) );
+		
 		// Store all pings (NEW)
 		if ( ! empty( $uptime_data['pings'] ) ) {
 			// Clear old pings (keep last 7 days only)

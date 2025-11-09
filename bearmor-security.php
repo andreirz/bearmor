@@ -3,7 +3,7 @@
  * Plugin Name: Bearmor Security
  * Plugin URI: https://bearmor.com
  * Description: Lightweight, robust WordPress security plugin for SMBs.
- * Version: 0.7.1
+ * Version: 0.7.2
  * Author: Bearmor Security Team
  * Author URI: https://bearmor.com
  * License: GPL v2 or later
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'BEARMOR_VERSION', '0.7.1' );
+define( 'BEARMOR_VERSION', '0.7.2' );
 define( 'BEARMOR_DB_VERSION', '1.3' ); // Database schema version
 define( 'BEARMOR_PLUGIN_FILE', __FILE__ );
 define( 'BEARMOR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -109,6 +109,33 @@ function bearmor_run_db_migrations( $from_version ) {
 			MODIFY COLUMN ai_prompt LONGTEXT" );
 		
 		error_log( 'BEARMOR: Migration to 1.2 complete' );
+	}
+	
+	// Migration 1.2 -> 1.3: Add uptime pings table
+	if ( version_compare( $from_version, '1.3', '<' ) ) {
+		error_log( 'BEARMOR: Running migration to 1.3' );
+		
+		// Check if bearmor_uptime_pings table exists
+		$table_exists = $wpdb->get_var( "SHOW TABLES LIKE '{$wpdb->prefix}bearmor_uptime_pings'" );
+		if ( ! $table_exists ) {
+			require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+			$charset_collate = $wpdb->get_charset_collate();
+			
+			$sql = "CREATE TABLE {$wpdb->prefix}bearmor_uptime_pings (
+				id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+				status VARCHAR(10) NOT NULL,
+				response_time INT NOT NULL,
+				pinged_at DATETIME NOT NULL,
+				synced_at DATETIME NOT NULL,
+				KEY idx_pinged_at (pinged_at),
+				KEY idx_status (status)
+			) $charset_collate;";
+			
+			dbDelta( $sql );
+			error_log( 'BEARMOR: Created bearmor_uptime_pings table' );
+		}
+		
+		error_log( 'BEARMOR: Migration to 1.3 complete' );
 	}
 }
 
