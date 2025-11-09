@@ -46,9 +46,10 @@ class Bearmor_Uptime_Sync {
 			return;
 		}
 		
-		error_log( 'BEARMOR: Uptime data received: ' . print_r( $uptime_data, true ) );
+		error_log( 'BEARMOR: Uptime data received: ' . wp_json_encode( $uptime_data ) );
+		error_log( 'BEARMOR: Pings in response: ' . ( isset( $uptime_data['pings'] ) ? count( $uptime_data['pings'] ) : 'NOT SET' ) );
 		
-		// Store downtime events
+		// Store downtime events and pings
 		self::store_downtime_events( $uptime_data );
 		
 		error_log( 'BEARMOR: Uptime sync complete' );
@@ -79,7 +80,11 @@ class Bearmor_Uptime_Sync {
 		// Store all pings (NEW)
 		if ( ! empty( $uptime_data['pings'] ) ) {
 			// Clear old pings (keep last 7 days only)
-			$wpdb->query( "DELETE FROM {$wpdb->prefix}bearmor_uptime_pings WHERE pinged_at < DATE_SUB(NOW(), INTERVAL 7 DAY)" );
+			$deleted = $wpdb->query( "DELETE FROM {$wpdb->prefix}bearmor_uptime_pings WHERE pinged_at < DATE_SUB(NOW(), INTERVAL 7 DAY)" );
+			error_log( 'BEARMOR: Deleted old pings: ' . $deleted );
+			
+			$inserted = 0;
+			$skipped = 0;
 			
 			foreach ( $uptime_data['pings'] as $ping ) {
 				// Check if ping already exists
@@ -91,7 +96,7 @@ class Bearmor_Uptime_Sync {
 				
 				if ( ! $existing ) {
 					// Insert new ping
-					$wpdb->insert(
+					$result = $wpdb->insert(
 						$wpdb->prefix . 'bearmor_uptime_pings',
 						array(
 							'status'        => $ping->status,
@@ -101,8 +106,20 @@ class Bearmor_Uptime_Sync {
 						),
 						array( '%s', '%d', '%s', '%s' )
 					);
+					
+					if ( $result ) {
+						$inserted++;
+					} else {
+						error_log( 'BEARMOR: Failed to insert ping: ' . $wpdb->last_error );
+					}
+				} else {
+					$skipped++;
 				}
 			}
+			
+			error_log( 'BEARMOR: Pings inserted: ' . $inserted . ', skipped (duplicates): ' . $skipped );
+		} else {
+			error_log( 'BEARMOR: No pings in uptime_data array' );
 		}
 		
 		// Store downtime events (existing logic)
