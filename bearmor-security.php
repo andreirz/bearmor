@@ -27,6 +27,12 @@ define( 'BEARMOR_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
 // Load Plugin Update Checker
 require BEARMOR_PLUGIN_DIR . 'plugin-update-checker/plugin-update-checker.php';
+
+// Manually load PucReadmeParser to prevent autoload issues
+if ( ! class_exists( 'PucReadmeParser' ) ) {
+	require BEARMOR_PLUGIN_DIR . 'plugin-update-checker/vendor/PucReadmeParser.php';
+}
+
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
 $bearmor_update_checker = PucFactory::buildUpdateChecker(
