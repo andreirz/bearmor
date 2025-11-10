@@ -122,6 +122,33 @@ class Bearmor_Uptime_Sync {
 			error_log( 'BEARMOR: No pings in uptime_data array' );
 		}
 		
+		// Auto-close stale open downtime events if site is currently up
+		$latest_ping = $wpdb->get_row(
+			"SELECT status, pinged_at FROM {$wpdb->prefix}bearmor_uptime_pings 
+			ORDER BY pinged_at DESC LIMIT 1"
+		);
+		
+		if ( $latest_ping && $latest_ping->status === 'up' ) {
+			// Close any open downtime events
+			$wpdb->query(
+				"UPDATE {$wpdb->prefix}bearmor_uptime_history 
+				SET status = 'closed', 
+					end_time = '{$latest_ping->pinged_at}',
+					synced_at = '" . current_time( 'mysql' ) . "'
+				WHERE status = 'open'"
+			);
+			error_log( 'BEARMOR: Auto-closed open downtime events (site is up)' );
+		}
+		
+		// Delete old downtime events (older than 90 days)
+		$deleted_old = $wpdb->query(
+			"DELETE FROM {$wpdb->prefix}bearmor_uptime_history 
+			WHERE start_time < DATE_SUB(NOW(), INTERVAL 90 DAY)"
+		);
+		if ( $deleted_old > 0 ) {
+			error_log( 'BEARMOR: Deleted ' . $deleted_old . ' old downtime events (>90 days)' );
+		}
+		
 		// Store downtime events (existing logic)
 		if ( empty( $uptime_data['downtime_events'] ) ) {
 			return;
