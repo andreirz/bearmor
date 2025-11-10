@@ -3,7 +3,7 @@
  * Plugin Name: Bearmor Security
  * Plugin URI: https://bearmor.com
  * Description: Lightweight, robust WordPress security plugin for SMBs.
- * Version: 0.7.7
+ * Version: 0.7.8
  * Author: Bearmor Security Team
  * Author URI: https://bearmor.com
  * License: GPL v2 or later
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'BEARMOR_VERSION', '0.7.7' );
+define( 'BEARMOR_VERSION', '0.7.8' );
 define( 'BEARMOR_DB_VERSION', '1.3' ); // Database schema version
 define( 'BEARMOR_PLUGIN_FILE', __FILE__ );
 define( 'BEARMOR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -58,30 +58,41 @@ function bearmor_check_db_version() {
 	}
 	$checked = true;
 	
-	global $wpdb;
-	$current_db_version = get_option( 'bearmor_db_version', '1.0' );
-	
-	// Check if critical tables exist (safety check for broken installs)
-	$critical_tables = array(
-		'bearmor_uptime_pings',
-		'bearmor_file_checksums'
-	);
-	
-	$missing_tables = false;
-	foreach ( $critical_tables as $table ) {
-		if ( ! $wpdb->get_var( "SHOW TABLES LIKE '{$wpdb->prefix}{$table}'" ) ) {
-			$missing_tables = true;
-			error_log( 'BEARMOR: Critical table missing: ' . $table );
-			break;
-		}
+	// Skip on update-core.php to avoid conflicts
+	if ( isset( $_SERVER['SCRIPT_NAME'] ) && strpos( $_SERVER['SCRIPT_NAME'], 'update-core.php' ) !== false ) {
+		return;
 	}
 	
-	// Run migrations if version mismatch OR critical tables missing
-	if ( version_compare( $current_db_version, BEARMOR_DB_VERSION, '<' ) || $missing_tables ) {
-		error_log( 'BEARMOR: Database migration needed. Current: ' . $current_db_version . ', Required: ' . BEARMOR_DB_VERSION );
-		bearmor_run_db_migrations( $current_db_version );
-		update_option( 'bearmor_db_version', BEARMOR_DB_VERSION );
-		error_log( 'BEARMOR: Database migrated to version ' . BEARMOR_DB_VERSION );
+	global $wpdb;
+	
+	// Wrap in try-catch to prevent fatal errors
+	try {
+		$current_db_version = get_option( 'bearmor_db_version', '1.0' );
+		
+		// Check if critical tables exist (safety check for broken installs)
+		$critical_tables = array(
+			'bearmor_uptime_pings',
+			'bearmor_file_checksums'
+		);
+		
+		$missing_tables = false;
+		foreach ( $critical_tables as $table ) {
+			if ( ! $wpdb->get_var( "SHOW TABLES LIKE '{$wpdb->prefix}{$table}'" ) ) {
+				$missing_tables = true;
+				error_log( 'BEARMOR: Critical table missing: ' . $table );
+				break;
+			}
+		}
+		
+		// Run migrations if version mismatch OR critical tables missing
+		if ( version_compare( $current_db_version, BEARMOR_DB_VERSION, '<' ) || $missing_tables ) {
+			error_log( 'BEARMOR: Database migration needed. Current: ' . $current_db_version . ', Required: ' . BEARMOR_DB_VERSION );
+			bearmor_run_db_migrations( $current_db_version );
+			update_option( 'bearmor_db_version', BEARMOR_DB_VERSION );
+			error_log( 'BEARMOR: Database migrated to version ' . BEARMOR_DB_VERSION );
+		}
+	} catch ( Exception $e ) {
+		error_log( 'BEARMOR: Migration check failed: ' . $e->getMessage() );
 	}
 }
 
