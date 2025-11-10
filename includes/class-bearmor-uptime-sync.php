@@ -91,7 +91,7 @@ class Bearmor_Uptime_Sync {
 				$existing = $wpdb->get_var( $wpdb->prepare(
 					"SELECT id FROM {$wpdb->prefix}bearmor_uptime_pings 
 					WHERE pinged_at = %s",
-					$ping->pinged_at
+					$ping['pinged_at']
 				) );
 				
 				if ( ! $existing ) {
@@ -99,9 +99,9 @@ class Bearmor_Uptime_Sync {
 					$result = $wpdb->insert(
 						$wpdb->prefix . 'bearmor_uptime_pings',
 						array(
-							'status'        => $ping->status,
-							'response_time' => $ping->response_time,
-							'pinged_at'     => $ping->pinged_at,
+							'status'        => $ping['status'],
+							'response_time' => $ping['response_time'],
+							'pinged_at'     => $ping['pinged_at'],
 							'synced_at'     => current_time( 'mysql' ),
 						),
 						array( '%s', '%d', '%s', '%s' )
