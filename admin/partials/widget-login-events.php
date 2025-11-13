@@ -46,6 +46,6 @@ $blocked_class = $blocked_ips > 0 ? 'bearmor-value-good' : 'bearmor-value-good';
 				<p style="margin: 5px 0 0 0; font-size: 11px; color: #666;">Blocked</p>
 			</div>
 		</div>
-		<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-login-activity' ) ); ?>" class="bearmor-widget-action">View Details</a>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-login-security' ) ); ?>" class="bearmor-widget-action">View Details</a>
 	</div>
 </div>

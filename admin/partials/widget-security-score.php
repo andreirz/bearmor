@@ -92,7 +92,7 @@ $score_class = isset( $color_class_map[ $color ] ) ? $color_class_map[ $color ] 
 	<div class="bearmor-score-info">
 		<p>Your site security is <?php echo $security_score >= 45 ? 'in good shape' : 'needs improvement'; ?>.</p>
 		<h3><?php echo esc_html( $label ); ?> (<?php echo esc_html( $grade ); ?>)</h3>
-		<?php if ( $is_pro && $is_ai_score ) : ?>
+		<?php if ( $is_pro && $is_ai_score && bearmor_is_dev_environment() ) : ?>
 			<p style="font-size: 12px; margin-top: 8px; opacity: 0.85; line-height: 1.4;">
 				<strong>Fixed:</strong> <?php echo esc_html( $fixed_score ); ?>/60 | 
 				<strong>AI:</strong> <?php echo esc_html( $discretionary_score ); ?>/50

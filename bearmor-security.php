@@ -25,6 +25,28 @@ define( 'BEARMOR_PLUGIN_FILE', __FILE__ );
 define( 'BEARMOR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BEARMOR_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
+/**
+ * Check if we're in development/staging environment
+ */
+function bearmor_is_dev_environment() {
+	$host = isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : '';
+	
+	// Show debug info if:
+	// 1. Domain ends with .local
+	// 2. Domain is localhost
+	// 3. IP address (127.0.0.1, 192.168.x.x, 10.0.x.x)
+	// 4. Custom constant defined in wp-config.php
+	
+	return (
+		strpos( $host, '.local' ) !== false ||
+		strpos( $host, 'localhost' ) !== false ||
+		strpos( $host, '127.0.0.1' ) !== false ||
+		strpos( $host, '192.168.' ) !== false ||
+		strpos( $host, '10.0.' ) !== false ||
+		( defined( 'BEARMOR_DEBUG' ) && BEARMOR_DEBUG === true )
+	);
+}
+
 // Load Plugin Update Checker
 require BEARMOR_PLUGIN_DIR . 'plugin-update-checker/plugin-update-checker.php';
 
@@ -922,17 +944,8 @@ function bearmor_admin_menu() {
 
 	add_submenu_page(
 		'bearmor-security',
-		'File Changes',
-		'File Changes',
-		'manage_options',
-		'bearmor-file-changes',
-		'bearmor_file_changes_page'
-	);
-
-	add_submenu_page(
-		'bearmor-security',
-		'Malware Alerts',
-		'Malware Alerts',
+		'Malware Scan',
+		'Malware Scan',
 		'manage_options',
 		'bearmor-malware-alerts',
 		'bearmor_malware_alerts_page'
@@ -940,29 +953,11 @@ function bearmor_admin_menu() {
 
 	add_submenu_page(
 		'bearmor-security',
-		'Login Activity',
-		'Login Activity',
+		'Login Security',
+		'Login Security',
 		'manage_options',
-		'bearmor-login-activity',
-		'bearmor_login_activity_page'
-	);
-
-	add_submenu_page(
-		'bearmor-security',
-		'Login Anomalies',
-		'Login Anomalies',
-		'manage_options',
-		'bearmor-login-anomalies',
-		'bearmor_login_anomalies_page'
-	);
-
-	add_submenu_page(
-		'bearmor-security',
-		'Hardening',
-		'Hardening',
-		'manage_options',
-		'bearmor-hardening',
-		'bearmor_hardening_page'
+		'bearmor-login-security',
+		'bearmor_login_security_page'
 	);
 
 	add_submenu_page(
@@ -972,6 +967,15 @@ function bearmor_admin_menu() {
 		'manage_options',
 		'bearmor-security-logs',
 		'bearmor_activity_log_page'
+	);
+
+	add_submenu_page(
+		'bearmor-security',
+		'File Changes',
+		'File Changes',
+		'manage_options',
+		'bearmor-file-changes',
+		'bearmor_file_changes_page'
 	);
 
 	add_submenu_page(
@@ -992,6 +996,14 @@ function bearmor_admin_menu() {
 		'bearmor_vulnerabilities_page'
 	);
 
+	add_submenu_page(
+		'bearmor-security',
+		'Hardening',
+		'Hardening',
+		'manage_options',
+		'bearmor-hardening',
+		'bearmor_hardening_page'
+	);
 
 	add_submenu_page(
 		'bearmor-security',
@@ -1107,25 +1119,14 @@ function bearmor_malware_alerts_page() {
 }
 
 /**
- * Login Activity page
+ * Login Security page (combined Login Activity + Anomalies)
  */
-function bearmor_login_activity_page() {
+function bearmor_login_security_page() {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		wp_die( 'Access denied' );
 	}
 	
-	require_once BEARMOR_PLUGIN_DIR . 'admin/login-activity.php';
-}
-
-/**
- * Login Anomalies page
- */
-function bearmor_login_anomalies_page() {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_die( 'Access denied' );
-	}
-	
-	require_once BEARMOR_PLUGIN_DIR . 'admin/login-anomalies.php';
+	require_once BEARMOR_PLUGIN_DIR . 'admin/login-security.php';
 }
 
 /**

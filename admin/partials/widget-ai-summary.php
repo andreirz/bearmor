@@ -96,12 +96,17 @@ $color_rating = $analysis ? $analysis['color_rating'] : 'gray';
 		<!-- AI Response with color-based class -->
 		<div class="bearmor-ai-report bearmor-ai-report-<?php echo esc_attr( $color_rating ); ?>" style="padding: 15px; border-radius: 8px; margin-bottom: 15px;">
 			<p class="bearmor-ai-meta" style="margin: 0 0 12px 0; font-size: 12px; color: #666;">
-Analysis from <?php echo esc_html( $analysis['model_used'] ); ?> (<?php echo number_format( $analysis['tokens_used'] ); ?> tokens) - <?php echo human_time_diff( strtotime( $analysis['created_at'] ), current_time( 'timestamp' ) ); ?> ago
+				Analysis from OpenAI GPT - <?php echo human_time_diff( strtotime( $analysis['created_at'] ), current_time( 'timestamp' ) ); ?> ago
+				<?php if ( bearmor_is_dev_environment() ) : ?>
+					<span style="opacity: 0.6;">(<?php echo esc_html( $analysis['model_used'] ); ?>, <?php echo number_format( $analysis['tokens_used'] ); ?> tokens)</span>
+				<?php endif; ?>
 			</p>
 			<div class="bearmor-ai-response" style="line-height: 1.6; font-size: 14px; white-space: pre-wrap;">
 <?php 
 	// Convert markdown to HTML
 	$response = $analysis['ai_response'];
+	// Strip [SCORE: XX] from response (keep for AI, hide from users)
+	$response = preg_replace( '/\[SCORE:\s*\d+\]\s*/i', '', $response );
 	// Bold: **text** -> <strong>text</strong>
 	$response = preg_replace( '/\*\*(.+?)\*\*/', '<strong>$1</strong>', $response );
 	// Italic: *text* -> <em>text</em>
@@ -111,14 +116,15 @@ Analysis from <?php echo esc_html( $analysis['model_used'] ); ?> (<?php echo num
 			</div>
 		</div>
 
-			<!-- Refresh button -->
-			<p style="margin: 10px 0; text-align: center;">
-				<button class="button button-primary" onclick="bearmor_trigger_ai_analysis(); return false;">
-					Refresh Analysis
-				</button>
-			</p>
+		<!-- Refresh button (always visible) -->
+		<p style="margin: 10px 0; text-align: center;">
+			<button class="button button-primary" onclick="bearmor_trigger_ai_analysis(); return false;">
+				Refresh Analysis
+			</button>
+		</p>
 
-			<!-- Debug: Show prompt sent to AI -->
+		<?php if ( bearmor_is_dev_environment() ) : ?>
+			<!-- Debug: Show prompt sent to AI (dev only) -->
 			<details style="margin-top: 15px; padding: 10px; background: #f5f5f5; border-radius: 5px; border: 1px solid #ddd;">
 				<summary style="cursor: pointer; font-weight: bold; color: #333; padding: 5px;">
 					Debug: Full Prompt Sent to OpenAI
@@ -137,6 +143,7 @@ Analysis from <?php echo esc_html( $analysis['model_used'] ); ?> (<?php echo num
 					</pre>
 				</div>
 			</details>
+		<?php endif; ?>
 
 		<?php else : ?>
 			<div class="bearmor-ai-report" style="padding: 20px; text-align: center; background: #f9f9f9; border-radius: 8px;">

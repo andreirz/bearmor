@@ -22,30 +22,8 @@
    Header
    =========================== */
 
-.bearmor-header {
-	margin-bottom: 30px;
-}
-
-.bearmor-header h1 {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	font-size: 32px;
-	font-weight: 600;
-	margin: 0 0 8px 0;
-	color: #1e1e1e;
-}
-
-.bearmor-header h1 .dashicons {
-	font-size: 36px;
-	width: 36px;
-	height: 36px;
-}
-
-.bearmor-tagline {
-	font-size: 16px;
-	color: #666;
-	margin: 0;
+.wrap h1 {
+	margin-bottom: 15px;
 }
 
 /* ===========================
@@ -150,29 +128,42 @@
 }
 
 /* ===========================
-   Widgets Grid
+   Widgets Grid (4+2 Layout)
    =========================== */
 
 .bearmor-widgets-grid {
 	display: grid;
-	grid-template-columns: repeat(6, 1fr);
+	grid-template-columns: repeat(4, 1fr);
 	gap: 16px;
 	margin-bottom: 24px;
 }
 
+/* Top row: 4 widgets (25% each) */
+.bearmor-widgets-grid > :nth-child(1),
+.bearmor-widgets-grid > :nth-child(2),
+.bearmor-widgets-grid > :nth-child(3),
+.bearmor-widgets-grid > :nth-child(4) {
+	grid-column: span 1;
+}
+
+/* Bottom row: File Changes + Uptime (50% each) */
+.bearmor-widgets-grid > :nth-child(5),
+.bearmor-widgets-grid > :nth-child(6) {
+	grid-column: span 2;
+}
+
 .bearmor-widget {
 	background: #fff;
-	border: 1px solid #e0e0e0;
 	border-radius: 8px;
 	padding: 18px;
 	transition: all 0.3s ease;
 	position: relative;
 	overflow: hidden;
+	box-shadow: 0 0 5px 5px rgba(0,0,0,0.03);
 }
 
 .bearmor-widget:hover {
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-	border-color: #8269FF;
 	transform: translateY(-2px);
 }
 
@@ -364,12 +355,12 @@
 
 .bearmor-quick-actions {
 	background: #fff;
-	border: 1px solid #e0e0e0;
 	border-radius: 10px;
 	padding: 24px;
 	display: grid;
-	grid-template-columns: 1fr;
+	grid-template-columns: 1fr 1fr;
 	gap: 24px;
+	box-shadow: 0 0 5px 5px rgba(0,0,0,0.03);
 }
 
 .bearmor-quick-actions h3 {
@@ -424,42 +415,54 @@
 	color: #fff;
 }
 
+.bearmor-action-card.bearmor-action-locked {
+	opacity: 0.6;
+	cursor: not-allowed;
+	background: #f5f5f5;
+}
+
+.bearmor-action-card.bearmor-action-locked:hover {
+	background: #f5f5f5;
+	border-color: #e0e0e0;
+	color: #1e1e1e;
+	transform: none;
+}
+
+.bearmor-action-card.bearmor-action-locked:hover .dashicons {
+	color: #8269FF;
+}
+
 /* ===========================
    AI Security Summary (Top Row)
    =========================== */
 
 .bearmor-ai-summary {
 	background: #fff;
-	border: 1px solid #e0e0e0;
 	border-radius: 10px;
 	overflow: hidden;
 	max-width: 100%;
+	box-shadow: 0 0 5px 5px rgba(0,0,0,0.03);
 }
 
 /* Score-based background colors */
 .bearmor-ai-summary.bearmor-ai-summary-excellent {
 	background: rgba(76, 175, 80, 0.05);
-	border-color: #4CAF50;
 }
 
 .bearmor-ai-summary.bearmor-ai-summary-good {
 	background: rgba(33, 150, 243, 0.05);
-	border-color: #2196F3;
 }
 
 .bearmor-ai-summary.bearmor-ai-summary-warning {
 	background: rgba(255, 152, 0, 0.05);
-	border-color: #FF9800;
 }
 
 .bearmor-ai-summary.bearmor-ai-summary-critical {
 	background: rgb(255, 224, 252);
-
 }
 
 .bearmor-ai-summary.bearmor-ai-summary-neutral {
 	background: #fff;
-	border-color: #e0e0e0;
 }
 
 .bearmor-ai-title h3 {
@@ -633,14 +636,40 @@
 	}
 }
 
+@media (max-width: 1024px) {
+	/* Top row widgets 2 per row on tablets */
+	.bearmor-widgets-grid > :nth-child(1),
+	.bearmor-widgets-grid > :nth-child(2),
+	.bearmor-widgets-grid > :nth-child(3),
+	.bearmor-widgets-grid > :nth-child(4) {
+		grid-column: span 2;
+	}
+	
+	/* Bottom row widgets stack full width */
+	.bearmor-widgets-grid > :nth-child(5),
+	.bearmor-widgets-grid > :nth-child(6) {
+		grid-column: span 4;
+	}
+}
+
 @media (max-width: 782px) {
 	.bearmor-score-card {
 		flex-direction: column;
 		text-align: center;
 	}
 
+	/* All widgets full width on mobile */
 	.bearmor-widgets-grid {
 		grid-template-columns: 1fr;
+	}
+	
+	.bearmor-widgets-grid > :nth-child(1),
+	.bearmor-widgets-grid > :nth-child(2),
+	.bearmor-widgets-grid > :nth-child(3),
+	.bearmor-widgets-grid > :nth-child(4),
+	.bearmor-widgets-grid > :nth-child(5),
+	.bearmor-widgets-grid > :nth-child(6) {
+		grid-column: span 1;
 	}
 }
 

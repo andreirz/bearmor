@@ -46,10 +46,7 @@ wp_enqueue_style( 'bearmor-dashboard', plugins_url( 'assets/css/dashboard.css', 
 ?>
 
 <div class="wrap">
-	<div class="bearmor-header">
-		<h1>🛡️ Security Hardening</h1>
-		<p class="bearmor-subtitle">Strengthen your WordPress security</p>
-	</div>
+	<h1>Security Hardening</h1>
 
 	<?php if ( $success_message ) : ?>
 		<div class="notice notice-success is-dismissible">

@@ -78,10 +78,7 @@ wp_enqueue_style( 'bearmor-dashboard', plugins_url( 'assets/css/dashboard.css', 
 ?>
 
 <div class="wrap">
-	<div class="bearmor-header">
-		<h1>📋 Security Logs</h1>
-		<p class="bearmor-subtitle">Activity log and firewall blocks</p>
-	</div>
+	<h1>Security Logs</h1>
 
 	<!-- Two Column Layout -->
 	<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">

@@ -115,13 +115,7 @@ wp_enqueue_style( 'bearmor-dashboard', BEARMOR_PLUGIN_URL . 'assets/css/dashboar
 ?>
 
 <div class="wrap bearmor-dashboard">
-	<div class="bearmor-header">
-		<h1>
-			<span class="dashicons dashicons-media-document" style="color: #8269FF;"></span>
-			File Changes Monitor
-		</h1>
-		<p class="bearmor-tagline">Detect and manage modified files</p>
-	</div>
+	<h1>File Changes</h1>
 
 	<!-- Scan Actions -->
 	<div class="bearmor-scan-actions" style="margin: 20px 0; padding: 24px; background: #fff; border: 1px solid #e0e0e0; border-radius: 10px;">

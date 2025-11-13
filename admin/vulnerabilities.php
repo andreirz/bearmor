@@ -62,10 +62,7 @@ wp_enqueue_style( 'bearmor-dashboard', plugins_url( 'assets/css/dashboard.css', 
 ?>
 
 <div class="wrap">
-	<div class="bearmor-header">
-		<h1>🔍 Vulnerability Scanner</h1>
-		<p class="bearmor-subtitle">Check plugins and themes for known security vulnerabilities</p>
-	</div>
+	<h1>Vulnerabilities</h1>
 
 	<?php if ( ! $is_pro ) : ?>
 		<!-- Pro Feature Overlay -->

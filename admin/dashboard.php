@@ -24,19 +24,14 @@ wp_enqueue_style( 'bearmor-dashboard', BEARMOR_PLUGIN_URL . 'assets/css/dashboar
 ?>
 
 <div class="wrap bearmor-dashboard">
-	<div class="bearmor-header" style="display: block; margin-bottom: 20px;">
-		<div style="display: flex; justify-content: space-between; align-items: center;">
-			<h1 style="margin: 0;">
-				<span class="dashicons dashicons-shield" style="color: #8269FF;"></span>
-				Bearmor Security
-			</h1>
-			
-			<!-- Plan Badge -->
-			<div style="display: flex; align-items: center; gap: 10px;">
-				<?php
-				$is_pro = class_exists( 'Bearmor_License' ) && Bearmor_License::is_pro();
-				if ( $is_pro ) :
-					?>
+	<h1>Bearmor Security</h1>
+
+	<div class="bearmor-top-row">
+		<!-- Quick Actions - Left (1/3) -->
+		<div class="bearmor-quick-actions" style="position: relative;">
+			<!-- Plan Badge - Top Right Corner -->
+			<div style="position: absolute; top: 12px; right: 12px; z-index: 10;">
+				<?php if ( $is_pro ) : ?>
 					<div style="
 						background: linear-gradient(135deg, #8269FF 0%, #6B52E8 100%);
 						color: white;
@@ -45,7 +40,6 @@ wp_enqueue_style( 'bearmor-dashboard', BEARMOR_PLUGIN_URL . 'assets/css/dashboar
 						font-size: 12px;
 						font-weight: 600;
 						cursor: help;
-						title: 'Pro features enabled'
 					" title="Pro features enabled">
 						PRO
 					</div>
@@ -58,40 +52,39 @@ wp_enqueue_style( 'bearmor-dashboard', BEARMOR_PLUGIN_URL . 'assets/css/dashboar
 						font-size: 12px;
 						font-weight: 600;
 						cursor: help;
-						title: 'Free tier'
 					" title="Free tier">
 						FREE
 					</div>
 				<?php endif; ?>
 			</div>
-		</div>
-	</div>
-
-	<div class="bearmor-top-row">
-		<!-- Quick Actions - Left (1/3) -->
-		<div class="bearmor-quick-actions">
-			<!-- Left Column: Settings, Hardening, Scan -->
+			
+			<!-- Left Column: Scans & Hardening -->
 			<div class="bearmor-actions-column">
 				<h4 style="margin: 0 0 12px 0; font-size: 13px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px;">Actions</h4>
 				<div class="bearmor-actions-grid">
-					<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-settings' ) ); ?>" class="bearmor-action-card">
-						<span class="dashicons dashicons-admin-settings"></span>
-						<span>Settings</span>
-					</a>
 					<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-hardening' ) ); ?>" class="bearmor-action-card">
 						<span class="dashicons dashicons-shield-alt"></span>
 						<span>Apply Hardening</span>
 					</a>
 					<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-malware-alerts' ) ); ?>" class="bearmor-action-card">
 						<span class="dashicons dashicons-search"></span>
-						<span>Run Scan</span>
+						<span>Run Malware Scan</span>
+					</a>
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-deep-scan' ) ); ?>" class="bearmor-action-card <?php echo ! $is_pro ? 'bearmor-action-locked' : ''; ?>" <?php echo ! $is_pro ? 'onclick="alert(\'Deep Scan is a PRO feature. Upgrade to unlock!\'); return false;"' : ''; ?>>
+						<span class="dashicons dashicons-search"></span>
+						<span>Run Deep Scan<?php echo ! $is_pro ? ' 🔒' : ''; ?></span>
 					</a>
 				</div>
 			</div>
-			<!-- Right Column: Reports -->
+			
+			<!-- Right Column: Settings & Reports -->
 			<div class="bearmor-actions-column">
-				<h4 style="margin: 0 0 12px 0; font-size: 13px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px;">Reports</h4>
+				<h4 style="margin: 0 0 12px 0; font-size: 13px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px;">&nbsp;</h4>
 				<div class="bearmor-actions-grid">
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-settings' ) ); ?>" class="bearmor-action-card">
+						<span class="dashicons dashicons-admin-settings"></span>
+						<span>Settings</span>
+					</a>
 					<a href="#" class="bearmor-action-card" onclick="bearmor_generate_pdf_report(); return false;">
 						<span class="dashicons dashicons-media-document"></span>
 						<span>Generate PDF Report</span>
@@ -146,8 +139,10 @@ function bearmor_generate_pdf_report() {
 }
 </script>
 
-	<!-- Widgets Grid -->
+	<!-- Widgets Grid (4+2 Layout) -->
 	<div class="bearmor-widgets-grid">
+		<!-- TOP ROW: 4 Security Widgets (25% each) -->
+		
 		<!-- Last Scan Widget -->
 		<?php
 		$last_malware_scan = get_option( 'bearmor_last_malware_scan' );
@@ -198,9 +193,6 @@ function bearmor_generate_pdf_report() {
 			</div>
 		</div>
 
-		<!-- File Changes Widget -->
-		<?php require BEARMOR_PLUGIN_DIR . 'admin/partials/widget-file-changes.php'; ?>
-
 		<!-- Login Activity Widget -->
 		<?php require BEARMOR_PLUGIN_DIR . 'admin/partials/widget-login-events.php'; ?>
 
@@ -209,6 +201,11 @@ function bearmor_generate_pdf_report() {
 
 		<!-- Firewall Widget -->
 		<?php require BEARMOR_PLUGIN_DIR . 'admin/partials/widget-firewall.php'; ?>
+
+		<!-- BOTTOM ROW: File Changes + Uptime (50% each) -->
+		
+		<!-- File Changes Widget -->
+		<?php require BEARMOR_PLUGIN_DIR . 'admin/partials/widget-file-changes.php'; ?>
 
 		<!-- Uptime Widget (Pro) -->
 		<?php require BEARMOR_PLUGIN_DIR . 'admin/partials/widget-uptime.php'; ?>

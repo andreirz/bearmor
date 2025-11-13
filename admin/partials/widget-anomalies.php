@@ -40,6 +40,6 @@ $value_class = $critical_anomalies > 0 ? 'bearmor-value-critical' : ( $all_anoma
 				<strong>🚨 <?php echo esc_html( $critical_anomalies ); ?> critical alert<?php echo $critical_anomalies > 1 ? 's' : ''; ?></strong>
 			</p>
 		<?php endif; ?>
-		<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-login-anomalies' ) ); ?>" class="bearmor-widget-action">View Details</a>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=bearmor-login-security' ) ); ?>" class="bearmor-widget-action">View Details</a>
 	</div>
 </div>
