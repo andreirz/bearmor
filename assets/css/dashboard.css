@@ -465,6 +465,12 @@
 	background: #fff;
 }
 
+.bearmor-ai-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
 .bearmor-ai-title h3 {
 	margin: 0;
 }
@@ -480,6 +486,46 @@
 	font-size: 24px;
 	width: 24px;
 	height: 24px;
+}
+
+.bearmor-ai-actions {
+	display: flex;
+	gap: 8px;
+}
+
+.bearmor-ai-icon-btn {
+	background: rgba(255, 255, 255, 0.2);
+	border: none;
+	border-radius: 4px;
+	padding: 6px 8px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	color: white;
+}
+
+.bearmor-ai-icon-btn:hover {
+	background: rgba(255, 255, 255, 0.3);
+}
+
+.bearmor-ai-icon-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.bearmor-ai-icon-btn .dashicons {
+	width: 18px;
+	height: 18px;
+	font-size: 18px;
+	color: white;
+}
+
+.bearmor-spinning {
+	animation: bearmor-spin 1s linear infinite;
+}
+
+@keyframes bearmor-spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
 }
 
 .bearmor-ai-response {
@@ -548,9 +594,8 @@
 }
 
 .bearmor-ai-report {
-
-	padding: 20px;
-	margin-bottom: 16px;
+	padding: 20px 20px 0 20px;
+	margin-bottom: 0;
 }
 
 .bearmor-ai-header

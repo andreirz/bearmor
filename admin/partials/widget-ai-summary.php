@@ -70,6 +70,20 @@ $color_rating = $analysis ? $analysis['color_rating'] : 'gray';
 			<span class="dashicons dashicons-shield-alt"></span>
 			<h3>AI Security Summary</h3>
 		</div>
+		<?php if ( $analysis ) : ?>
+		<div class="bearmor-ai-actions">
+			<!-- Refresh icon (always visible) -->
+			<button class="bearmor-ai-icon-btn" onclick="bearmor_trigger_ai_analysis(); return false;" title="Refresh Analysis">
+				<span class="dashicons dashicons-update"></span>
+			</button>
+			<?php if ( bearmor_is_dev_environment() ) : ?>
+				<!-- Debug info icon (dev only) -->
+				<button class="bearmor-ai-icon-btn" onclick="bearmor_toggle_debug_prompt(); return false;" title="View Debug Prompt">
+					<span class="dashicons dashicons-info"></span>
+				</button>
+			<?php endif; ?>
+		</div>
+		<?php endif; ?>
 	</div>
 	<div class="bearmor-ai-content">
 		<?php if ( ! $is_pro ) : ?>
@@ -116,33 +130,21 @@ $color_rating = $analysis ? $analysis['color_rating'] : 'gray';
 			</div>
 		</div>
 
-		<!-- Refresh button (always visible) -->
-		<p style="margin: 10px 0; text-align: center;">
-			<button class="button button-primary" onclick="bearmor_trigger_ai_analysis(); return false;">
-				Refresh Analysis
-			</button>
-		</p>
-
 		<?php if ( bearmor_is_dev_environment() ) : ?>
-			<!-- Debug: Show prompt sent to AI (dev only) -->
-			<details style="margin-top: 15px; padding: 10px; background: #f5f5f5; border-radius: 5px; border: 1px solid #ddd;">
-				<summary style="cursor: pointer; font-weight: bold; color: #333; padding: 5px;">
-					Debug: Full Prompt Sent to OpenAI
-				</summary>
-				<div style="margin-top: 10px;">
-					<p style="margin: 0 0 10px 0; font-size: 11px; color: #666; font-weight: bold;">
-						SYSTEM MESSAGE (AI Behavior):
-					</p>
-					<pre style="margin: 0 0 15px 0; padding: 10px; background: #f9f9f9; border: 1px solid #eee; border-radius: 3px; font-size: 11px; overflow-x: auto; white-space: pre-wrap;">You are a friendly, helpful WordPress security advisor. Your job is to help shop owners understand their site security in simple, non-technical language. Be reassuring and positive. Remember: firewall blocks, failed logins, and login anomalies are GOOD - they mean the plugin is protecting the site. ALWAYS include [SCORE: XX] in your response.</pre>
+			<!-- Debug: Show prompt sent to AI (dev only, hidden by default) -->
+			<div id="bearmor-debug-prompt" style="display: none; margin-top: 15px; padding: 10px; background: #f5f5f5; border-radius: 5px; border: 1px solid #ddd;">
+				<p style="margin: 0 0 10px 0; font-size: 11px; color: #666; font-weight: bold;">
+					SYSTEM MESSAGE (AI Behavior):
+				</p>
+				<pre style="margin: 0 0 15px 0; padding: 10px; background: #f9f9f9; border: 1px solid #eee; border-radius: 3px; font-size: 11px; overflow-x: auto; white-space: pre-wrap;">You are a friendly, helpful WordPress security advisor. Your job is to help shop owners understand their site security in simple, non-technical language. Be reassuring and positive. Remember: firewall blocks, failed logins, and login anomalies are GOOD - they mean the plugin is protecting the site. ALWAYS include [SCORE: XX] in your response.</pre>
 
-					<p style="margin: 0 0 10px 0; font-size: 11px; color: #666; font-weight: bold;">
-						USER PROMPT + SECURITY DATA (combined):
-					</p>
-					<pre style="margin: 0; padding: 10px; background: #f9f9f9; border: 1px solid #eee; border-radius: 3px; font-size: 11px; overflow-x: auto; max-height: 500px; overflow-y: auto; white-space: pre-wrap;">
+				<p style="margin: 0 0 10px 0; font-size: 11px; color: #666; font-weight: bold;">
+					USER PROMPT + SECURITY DATA (combined):
+				</p>
+				<pre style="margin: 0; padding: 10px; background: #f9f9f9; border: 1px solid #eee; border-radius: 3px; font-size: 11px; overflow-x: auto; max-height: 500px; overflow-y: auto; white-space: pre-wrap;">
 <?php echo esc_html( $analysis['ai_prompt'] ); ?>
-					</pre>
-				</div>
-			</details>
+				</pre>
+			</div>
 		<?php endif; ?>
 
 		<?php else : ?>
@@ -161,14 +163,22 @@ $color_rating = $analysis ? $analysis['color_rating'] : 'gray';
 </div>
 
 <script>
+function bearmor_toggle_debug_prompt() {
+	var debugDiv = document.getElementById('bearmor-debug-prompt');
+	if (debugDiv) {
+		debugDiv.style.display = debugDiv.style.display === 'none' ? 'block' : 'none';
+	}
+}
+
 function bearmor_trigger_ai_analysis() {
 	if ( !confirm( 'Run AI analysis now? This will analyze your last 7 days of security data.' ) ) {
 		return;
 	}
 	
-	var button = event.target;
+	var button = event.target.closest('button');
+	var icon = button.querySelector('.dashicons');
 	button.disabled = true;
-	button.textContent = 'Running...';
+	icon.classList.add('bearmor-spinning');
 	
 	jQuery.post( ajaxurl, {
 		action: 'bearmor_trigger_ai_analysis',
@@ -183,13 +193,13 @@ function bearmor_trigger_ai_analysis() {
 		} else {
 			alert( 'Error: ' + ( response.data ? response.data.message : 'Unknown error' ) );
 			button.disabled = false;
-			button.textContent = 'Refresh Analysis';
+			icon.classList.remove('bearmor-spinning');
 		}
 	}).fail( function( xhr, status, error ) {
 		console.error( 'AJAX Error:', error, xhr.responseText );
 		alert( 'Network error: ' + error );
 		button.disabled = false;
-		button.textContent = 'Refresh Analysis';
+		icon.classList.remove('bearmor-spinning');
 	});
 }
 </script>
