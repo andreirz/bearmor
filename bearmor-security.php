@@ -1,11 +1,11 @@
 <?php
 /**
  * Plugin Name: Bearmor Security
- * Plugin URI: https://bearmor.com
+ * Plugin URI: https://bearmor.eu
  * Description: Lightweight, robust WordPress security plugin for SMBs.
- * Version: 0.7.9
+ * Version: 0.8.0
  * Author: Bearmor Security Team
- * Author URI: https://bearmor.com
+ * Author URI: https://bearz.ee
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: bearmor-security
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define plugin constants
-define( 'BEARMOR_VERSION', '0.7.9' );
+define( 'BEARMOR_VERSION', '0.8.0' );
 define( 'BEARMOR_DB_VERSION', '1.3' ); // Database schema version
 define( 'BEARMOR_PLUGIN_FILE', __FILE__ );
 define( 'BEARMOR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -46,25 +46,6 @@ function bearmor_is_dev_environment() {
 		( defined( 'BEARMOR_DEBUG' ) && BEARMOR_DEBUG === true )
 	);
 }
-
-// Load Plugin Update Checker
-require BEARMOR_PLUGIN_DIR . 'plugin-update-checker/plugin-update-checker.php';
-
-// Manually load PucReadmeParser to prevent autoload issues
-if ( ! class_exists( 'PucReadmeParser' ) ) {
-	require BEARMOR_PLUGIN_DIR . 'plugin-update-checker/vendor/PucReadmeParser.php';
-}
-
-use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
-
-$bearmor_update_checker = PucFactory::buildUpdateChecker(
-	'https://github.com/andreirz/bearmor/',
-	__FILE__,
-	'bearmor-security'
-);
-
-// Set the branch that contains the stable release
-$bearmor_update_checker->setBranch('main');
 
 // Load registration classes (will be used for call-home)
 require_once BEARMOR_PLUGIN_DIR . 'includes/class-bearmor-site-registration.php';
@@ -1722,7 +1703,7 @@ function bearmor_ajax_get_uptime_history() {
 	global $wpdb;
 	
 	// Get downtime events for last 30 days
-	$thirty_days_ago = date( 'Y-m-d H:i:s', strtotime( '-30 days' ) );
+	$thirty_days_ago = gmdate( 'Y-m-d H:i:s', strtotime( '-30 days' ) );
 	$downtime_events = $wpdb->get_results( $wpdb->prepare(
 		"SELECT * FROM {$wpdb->prefix}bearmor_uptime_history 
 		WHERE start_time >= %s 
@@ -1733,9 +1714,9 @@ function bearmor_ajax_get_uptime_history() {
 	// Get daily uptime stats for last 30 days
 	$daily_stats = array();
 	for ( $i = 29; $i >= 0; $i-- ) {
-		$date = date( 'Y-m-d', strtotime( "-$i days" ) );
-		$day_start = date( 'Y-m-d 00:00:00', strtotime( "-$i days" ) );
-		$day_end = date( 'Y-m-d 23:59:59', strtotime( "-$i days" ) );
+		$date = gmdate( 'Y-m-d', strtotime( "-$i days" ) );
+		$day_start = gmdate( 'Y-m-d 00:00:00', strtotime( "-$i days" ) );
+		$day_end = gmdate( 'Y-m-d 23:59:59', strtotime( "-$i days" ) );
 		
 		$total_pings = $wpdb->get_var( $wpdb->prepare(
 			"SELECT COUNT(*) FROM {$wpdb->prefix}bearmor_uptime_pings 

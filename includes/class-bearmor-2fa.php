@@ -158,12 +158,12 @@ class Bearmor_2FA {
 		$stored_code = get_transient( 'bearmor_2fa_code_' . $user_id );
 		
 		if ( ! $stored_code ) {
-			wp_redirect( wp_login_url() . '?bearmor_2fa_error=expired' );
+			wp_safe_redirect( wp_login_url() . '?bearmor_2fa_error=expired' );
 			exit;
 		}
 		
 		if ( $entered_code !== $stored_code ) {
-			wp_redirect( wp_login_url() . '?bearmor_2fa_error=invalid&user_id=' . $user_id );
+			wp_safe_redirect( wp_login_url() . '?bearmor_2fa_error=invalid&user_id=' . $user_id );
 			exit;
 		}
 		
@@ -180,7 +180,7 @@ class Bearmor_2FA {
 		}
 		
 		// Redirect to admin
-		wp_redirect( admin_url() );
+		wp_safe_redirect( admin_url() );
 		exit;
 	}
 

@@ -148,8 +148,8 @@ $anomaly_total_pages = ceil( $anomaly_total / $anomaly_per_page );
 					for ( $i = 1; $i <= $activity_total_pages; $i++ ) :
 						$class = ( $i === $activity_page ) ? 'button button-primary' : 'button';
 						?>
-						<a href="<?php echo esc_url( add_query_arg( 'activity_paged', $i, $base_url ) ); ?>" class="<?php echo $class; ?>" style="margin: 0 2px;">
-							<?php echo $i; ?>
+						<a href="<?php echo esc_url( add_query_arg( 'activity_paged', $i, $base_url ) ); ?>" class="<?php echo esc_attr( $class ); ?>" style="margin: 0 2px;">
+						<?php echo esc_html( $i ); ?>
 						</a>
 					<?php endfor; ?>
 				</div>
@@ -198,7 +198,7 @@ $anomaly_total_pages = ceil( $anomaly_total / $anomaly_per_page );
 									?>
 								</td>
 								<td>
-									<span style="color: <?php echo $score_class; ?>; font-weight: 600;">
+									<span style="color: <?php echo esc_attr( $score_class ); ?>; font-weight: 600;">
 										<?php echo esc_html( $anomaly->anomaly_score ); ?>/100
 									</span>
 								</td>
@@ -216,8 +216,8 @@ $anomaly_total_pages = ceil( $anomaly_total / $anomaly_per_page );
 					for ( $i = 1; $i <= $anomaly_total_pages; $i++ ) :
 						$class = ( $i === $anomaly_page ) ? 'button button-primary' : 'button';
 						?>
-						<a href="<?php echo esc_url( add_query_arg( 'anomaly_paged', $i, $base_url ) ); ?>" class="<?php echo $class; ?>" style="margin: 0 2px;">
-							<?php echo $i; ?>
+						<a href="<?php echo esc_url( add_query_arg( 'anomaly_paged', $i, $base_url ) ); ?>" class="<?php echo esc_attr( $class ); ?>" style="margin: 0 2px;">
+						<?php echo esc_html( $i ); ?>
 						</a>
 					<?php endfor; ?>
 				</div>

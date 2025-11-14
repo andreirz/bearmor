@@ -169,16 +169,16 @@ function bearmor_generate_pdf_report() {
 					<?php if ( $total_threats > 0 ) : ?>
 						<div class="bearmor-scan-threats" style="font-size: 12px; color: #666; margin-bottom: 12px;">
 							<?php if ( $high_count > 0 ) : ?>
-								<span style="color: #d63638; font-weight: 600;">🔴 <?php echo $high_count; ?> High</span>
+								<span style="color: #d63638; font-weight: 600;">🔴 <?php echo esc_html( $high_count ); ?> High</span>
 							<?php endif; ?>
 							<?php if ( $medium_count > 0 ) : ?>
-								<span style="color: #f56e28; font-weight: 600; margin-left: 8px;">🟠 <?php echo $medium_count; ?> Medium</span>
+								<span style="color: #f56e28; font-weight: 600; margin-left: 8px;">🟠 <?php echo esc_html( $medium_count ); ?> Medium</span>
 							<?php endif; ?>
 							<?php if ( $critical_count > 0 ) : ?>
-								<span style="color: #d63638; font-weight: 600; margin-left: 8px;">🔴 <?php echo $critical_count; ?> Critical (legacy)</span>
+								<span style="color: #d63638; font-weight: 600; margin-left: 8px;">🔴 <?php echo esc_html( $critical_count ); ?> Critical (legacy)</span>
 							<?php endif; ?>
 							<?php if ( $low_count > 0 ) : ?>
-								<span style="color: #00a32a; font-weight: 600; margin-left: 8px;">🟢 <?php echo $low_count; ?> Low</span>
+								<span style="color: #00a32a; font-weight: 600; margin-left: 8px;">🟢 <?php echo esc_html( $low_count ); ?> Low</span>
 							<?php endif; ?>
 						</div>
 					<?php else : ?>

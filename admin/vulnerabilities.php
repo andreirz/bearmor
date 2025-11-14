@@ -150,19 +150,19 @@ wp_enqueue_style( 'bearmor-dashboard', plugins_url( 'assets/css/dashboard.css', 
 	<!-- Stats Cards -->
 	<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0;">
 		<div style="background: #fff; border-left: 4px solid #d63638; padding: 20px; border-radius: 5px;">
-			<h3 style="margin: 0; font-size: 32px; color: #d63638;"><?php echo $counts['critical']; ?></h3>
+			<h3 style="margin: 0; font-size: 32px; color: #d63638;"><?php echo esc_html( $counts['critical'] ); ?></h3>
 			<p style="margin: 5px 0 0 0; color: #666;">Critical</p>
 		</div>
 		<div style="background: #fff; border-left: 4px solid #f56e28; padding: 20px; border-radius: 5px;">
-			<h3 style="margin: 0; font-size: 32px; color: #f56e28;"><?php echo $counts['high']; ?></h3>
+			<h3 style="margin: 0; font-size: 32px; color: #f56e28;"><?php echo esc_html( $counts['high'] ); ?></h3>
 			<p style="margin: 5px 0 0 0; color: #666;">High</p>
 		</div>
 		<div style="background: #fff; border-left: 4px solid #dba617; padding: 20px; border-radius: 5px;">
-			<h3 style="margin: 0; font-size: 32px; color: #dba617;"><?php echo $counts['medium']; ?></h3>
+			<h3 style="margin: 0; font-size: 32px; color: #dba617;"><?php echo esc_html( $counts['medium'] ); ?></h3>
 			<p style="margin: 5px 0 0 0; color: #666;">Medium</p>
 		</div>
 		<div style="background: #fff; border-left: 4px solid #00a32a; padding: 20px; border-radius: 5px;">
-			<h3 style="margin: 0; font-size: 32px; color: #00a32a;"><?php echo $counts['low']; ?></h3>
+			<h3 style="margin: 0; font-size: 32px; color: #00a32a;"><?php echo esc_html( $counts['low'] ); ?></h3>
 			<p style="margin: 5px 0 0 0; color: #666;">Low</p>
 		</div>
 	</div>
@@ -232,7 +232,7 @@ wp_enqueue_style( 'bearmor-dashboard', plugins_url( 'assets/css/dashboard.css', 
 									<?php echo esc_html( ucfirst( $item['item_type'] ) ); ?>
 								</span>
 								<span style="background: #d63638; color: white; padding: 4px 12px; border-radius: 3px; font-size: 12px; font-weight: bold;">
-									<?php echo $vuln_count; ?> Vulnerabilit<?php echo $vuln_count > 1 ? 'ies' : 'y'; ?>
+									<?php echo esc_html( $vuln_count ); ?> Vulnerabilit<?php echo $vuln_count > 1 ? 'ies' : 'y'; ?>
 								</span>
 							</div>
 							
@@ -275,17 +275,17 @@ wp_enqueue_style( 'bearmor-dashboard', plugins_url( 'assets/css/dashboard.css', 
 								
 								<?php if ( $description ) : ?>
 									<p style="margin: 0 0 8px 0; color: #666; font-size: 13px; line-height: 1.5;">
-										<span class="vuln-desc-short-<?php echo $vuln->id; ?>">
+										<span class="vuln-desc-short-<?php echo esc_attr( $vuln->id ); ?>">
 											<?php echo esc_html( $short_desc ); ?>
 										</span>
 										<?php if ( $is_long ) : ?>
-											<span class="vuln-desc-full-<?php echo $vuln->id; ?>" style="display: none;">
+											<span class="vuln-desc-full-<?php echo esc_attr( $vuln->id ); ?>" style="display: none;">
 												<?php echo esc_html( $description ); ?>
 											</span>
-											<a href="#" onclick="event.preventDefault(); document.querySelector('.vuln-desc-short-<?php echo $vuln->id; ?>').style.display='none'; document.querySelector('.vuln-desc-full-<?php echo $vuln->id; ?>').style.display='inline'; this.style.display='none'; document.querySelector('.vuln-less-<?php echo $vuln->id; ?>').style.display='inline';" style="color: #2271b1; text-decoration: none; font-size: 12px;">
+											<a href="#" onclick="event.preventDefault(); document.querySelector('.vuln-desc-short-<?php echo esc_js( $vuln->id ); ?>').style.display='none'; document.querySelector('.vuln-desc-full-<?php echo esc_js( $vuln->id ); ?>').style.display='inline'; this.style.display='none'; document.querySelector('.vuln-less-<?php echo esc_js( $vuln->id ); ?>').style.display='inline';" style="color: #2271b1; text-decoration: none; font-size: 12px;">
 												View more
 											</a>
-											<a href="#" class="vuln-less-<?php echo $vuln->id; ?>" onclick="event.preventDefault(); document.querySelector('.vuln-desc-short-<?php echo $vuln->id; ?>').style.display='inline'; document.querySelector('.vuln-desc-full-<?php echo $vuln->id; ?>').style.display='none'; this.style.display='none'; this.previousElementSibling.style.display='inline';" style="display: none; color: #2271b1; text-decoration: none; font-size: 12px;">
+											<a href="#" class="vuln-less-<?php echo esc_attr( $vuln->id ); ?>" onclick="event.preventDefault(); document.querySelector('.vuln-desc-short-<?php echo esc_js( $vuln->id ); ?>').style.display='inline'; document.querySelector('.vuln-desc-full-<?php echo esc_js( $vuln->id ); ?>').style.display='none'; this.style.display='none'; this.previousElementSibling.style.display='inline';" style="display: none; color: #2271b1; text-decoration: none; font-size: 12px;">
 												View less
 											</a>
 										<?php endif; ?>

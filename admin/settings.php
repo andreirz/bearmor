@@ -208,7 +208,7 @@ if ( $last_verified ) {
 				echo '<tr style="border-bottom: 1px solid #eee;">';
 				echo '<td style="padding: 8px 0;">' . esc_html( $label ) . '</td>';
 				echo '<td style="padding: 8px 0;">' . esc_html( $schedule ) . '</td>';
-				echo '<td style="padding: 8px 0;">' . $next_run_time . '</td>';
+				echo '<td style="padding: 8px 0;">' . wp_kses_post( $next_run_time ) . '</td>';
 				echo '</tr>';
 			}
 			?>

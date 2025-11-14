@@ -117,7 +117,7 @@ class Bearmor_Hardening {
 	 */
 	public static function force_ssl_redirect() {
 		if ( ! is_ssl() && ! is_admin() ) {
-			wp_redirect( 'https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'], 301 );
+			wp_safe_redirect( 'https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'], 301 );
 			exit;
 		}
 	}

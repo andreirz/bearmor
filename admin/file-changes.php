@@ -264,7 +264,7 @@ wp_enqueue_style( 'bearmor-dashboard', BEARMOR_PLUGIN_URL . 'assets/css/dashboar
 		}
 	}
 	?>
-	<h2 style="margin-top: 40px; color: #666;">Quarantined Files (<?php echo $actual_count; ?>)</h2>
+	<h2 style="margin-top: 40px; color: #666;">Quarantined Files (<?php echo esc_html( $actual_count ); ?>)</h2>
 
 	<?php if ( $actual_count === 0 ) : ?>
 		<p style="color: #999;">No files in quarantine.</p>

@@ -1,10 +1,10 @@
-=== Bearmor Security - Lightweight WordPress Security Plugin ===
+=== Bearmor Security ===
 Contributors: bearmorsecurity
 Tags: security, malware scanner, firewall, login security, two-factor authentication
 Requires at least: 5.8
-Tested up to: 6.7
+Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.7.2
+Stable tag: 0.8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -268,6 +268,30 @@ Yes! PRO subscriptions come with a 30-day money-back guarantee. No questions ask
 ---
 
 == Changelog ==
+
+= 0.8.0 - 2025-11-14 =
+* Removed: GitHub update checker (WordPress.org will handle updates)
+* Fixed: Changed wp_redirect() to wp_safe_redirect() for better security
+* Fixed: Changed date() to gmdate() for timezone-safe database operations
+* Fixed: Added escaping to output variables for enhanced security
+* Improved: WordPress.org submission ready - cleaned up code standards
+
+= 0.7.9 - 2025-11-14 =
+* Improved: Dashboard layout - 4+2 widget grid (4 security widgets top, File Changes + Uptime bottom)
+* Improved: Quick Actions split into 2 columns (Scans/Hardening | Settings/Reports)
+* Improved: AI Summary widget - moved refresh and debug icons to header
+* Improved: Replaced widget borders with soft box-shadows for cleaner look
+* Added: Dev environment detection - hides debug info in production
+* Added: Combined Login Security page (Login Activity + Anomalies in 2 columns)
+* Changed: Menu reorganization - renamed "Malware Alerts" to "Malware Scan"
+* Changed: All page headers now use clean WordPress default styling
+* Fixed: Login Anomalies now show username and readable reason
+
+= 0.7.8 - 2025-11-13 =
+* Added: PRO/FREE badge moved to Quick Actions top-right corner
+* Added: "Run Deep Scan" action with PRO lock for free users
+* Changed: "Run Scan" renamed to "Run Malware Scan"
+* Improved: Removed "Reports" section, moved PDF button under actions
 
 = 0.7.2 - 2025-11-09 =
 * Fixed: Uptime monitoring table creation on plugin updates
